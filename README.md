@@ -37,6 +37,13 @@ Patient payment needs a Stripe test key on the hosted project (`supabase secrets
 STRIPE_SECRET_KEY=... STRIPE_WEBHOOK_SECRET=... SITE_URLS=https://watson-assists.onrender.com`)
 and a webhook endpoint at `<project>/functions/v1/stripe-webhook` (decision 0007).
 
+## Run all of Watson on one computer
+
+    scripts/local.sh setup && scripts/local.sh start     # then http://localhost:3000
+
+The database, engine and website all on one Mac (or Linux machine), payments and Google Calendar off
+unless their test keys are added: see [docs/run-locally.md](docs/run-locally.md).
+
 ## Check everything
 
     pnpm check                             # tests, lint and type checks for every package
