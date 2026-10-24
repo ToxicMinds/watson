@@ -965,6 +965,8 @@ export type Database = {
           p_consent_recorded: boolean
           p_fee_cents?: number
           p_language: Database["public"]["Enums"]["consultation_language"]
+          p_patient_contact?: string
+          p_patient_name?: string
           p_scenario_notes?: string
           p_scheduled_at: string
           p_synthetic_patient_ref?: string
