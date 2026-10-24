@@ -191,7 +191,7 @@ export function recordCall(local: MediaStream, onPiece?: LivePiece) {
     },
     start() {
       if (started) return;
-      void context.resume();
+      context.resume().catch(() => {}); // a call ended at once closes the mixer while it starts (Firefox)
       practitioner.start(1000);
       patient.start(1000);
       started = performance.now();
@@ -207,7 +207,7 @@ export function recordCall(local: MediaStream, onPiece?: LivePiece) {
       const seconds = (performance.now() - started) / 1000;
       stopPieces.forEach((stop) => stop());
       await Promise.all([stopped(practitioner), stopped(patient)]);
-      void context.close();
+      context.close().catch(() => {});
       const type = practitioner.mimeType;
       return {
         practitioner: new Blob(chunks.practitioner, { type }),
