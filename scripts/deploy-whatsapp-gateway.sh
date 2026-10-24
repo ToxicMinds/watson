@@ -6,7 +6,7 @@
 # ~/.config/watson/whatsapp-gateway-pairing-password.
 set -euo pipefail
 : "${SUPABASE_ACCESS_TOKEN:?set by .envrc}" "${SUPABASE_PROJECT_REF:?set by .envrc}"
-export RENDER_CLI_CONFIG_PATH="${RENDER_CLI_CONFIG_PATH:-$HOME/.render/profiles/watson.yaml}"
+export RENDER_CLI_CONFIG_PATH="${RENDER_CLI_CONFIG_PATH:-$HOME/.render/profiles/watson-assists.yaml}"
 dir="$HOME/.config/watson"
 name=watson-whatsapp
 render_key=$(sed -n 's/^ *key: *//p' "$RENDER_CLI_CONFIG_PATH" | head -1)
@@ -18,12 +18,12 @@ secret_file whatsapp-gateway-state-key
 secret_file whatsapp-gateway-pairing-password
 
 id=$(render services list -o json --confirm | python3 -c "import json,sys
-for item in json.load(sys.stdin):
+for item in json.load(sys.stdin) or []:  # an empty workspace lists null
     s = item.get('service', item)
     if s['name'] == '$name': print(s['id'])")
 if [ -z "$id" ]; then
   id=$(render services create --name "$name" --type web_service --runtime docker \
-    --repo https://github.com/ToxicMinds/watson --branch main --root-directory apps/whatsapp-gateway \
+    --repo https://github.com/watson-assists/watson --branch main --root-directory apps/whatsapp-gateway \
     --plan free --region frankfurt --health-check-path /health -o json --confirm |
     python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('service', d)['id'])")
 fi
