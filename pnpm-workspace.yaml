@@ -6,6 +6,7 @@ packages:
   - "packages/*"
   - "supabase"
 allowBuilds:
+  '@pnpm/exe': true
   sharp: false
   unrs-resolver: false
 overrides:
