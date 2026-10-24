@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { CopyButton } from "@/components/copy-button";
+import { CorrectableLine } from "@/components/correctable-line";
 import { Notice } from "@/components/status";
 import { call as rpc, explain } from "@/lib/api";
 import { clock } from "@/lib/audio";
@@ -13,6 +14,7 @@ import { connect, patientLink, recordCall, type CallState, type Recording } from
 import type { Tables } from "@/lib/database.types";
 import { liveLines, livePieceSender, type LiveLine } from "@/lib/live";
 import { RequireSession } from "@/lib/session";
+import type { Spelling } from "@/lib/spelling";
 import { supabase } from "@/lib/supabase";
 import { attachAudio } from "@/lib/tracks";
 
@@ -90,6 +92,16 @@ function Room({ userId }: { userId: string }) {
     media.current?.getTracks().forEach((track) => track.stop());
     void session.current?.leave();
   }, []);
+
+  // A line corrected during the call (owner, 24 Oct); a few words changed teach Watson their spelling.
+  const [learned, setLearned] = useState<Spelling[]>([]);
+  async function correctLine(pieceId: string, text: string, spellings: Spelling[]) {
+    const outcome = await rpc("correct_live_line", { p_piece_id: pieceId, p_text: text, p_spellings: spellings });
+    if (!outcome.ok) return false;
+    if (spellings.length) setLearned(spellings);
+    setLines(await liveLines(id));
+    return true;
+  }
 
   // The live transcript: what the engine has written so far, every three seconds while the call runs.
   const called = state !== null;
@@ -265,11 +277,17 @@ function Room({ userId }: { userId: string }) {
                 <div>
                   <span className="wa-quote__who">{line.speaker === "practitioner" ? "You" : consultation.patients?.name ?? "Patient"}</span>
                   <span className="wa-livetext__when">{clock(line.offset_seconds)}</span>
-                  <p className="wa-quote__text">{line.text}</p>
+                  <CorrectableLine textClassName="wa-quote__text" text={line.text} heard={line.heard_text}
+                    onSave={(text, spellings) => correctLine(line.id, text, spellings)} />
                 </div>
               </li>
             ))}
           </ol>
+          {learned.length > 0 && (
+            <Notice title="Watson will spell it your way">
+              {learned.map((spelling) => `\u201c${spelling.written}\u201d`).join(", ")}, for the rest of the call, in the full transcript and in the form.
+            </Notice>
+          )}
         </aside>
       )}
       </div>

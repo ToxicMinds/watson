@@ -250,7 +250,10 @@ class Engine:
             with tempfile.TemporaryDirectory(dir=self.settings.work_dir) as folder:
                 path = Path(folder) / "piece"
                 path.write_bytes(data)
-                heard = transcribe_track(path, piece["language"], self.settings, lambda: False)
+                hints = self._hints(piece.get("consultation_id"))
+                heard = transcribe_track(
+                    path, piece["language"], self.settings, lambda: False, hints=hints
+                )
             text = " ".join(s.text for s in heard.segments if not s.possibly_not_speech)
             self.main.rpc("engine_live_piece_done", {"p_id": piece["id"], "p_text": text})
         except Exception as exc:
@@ -258,6 +261,18 @@ class Engine:
             self.main.rpc("engine_live_piece_failed", {"p_id": piece["id"]})
         finally:
             self._remove_live_file(piece["storage_path"])
+
+    def _hints(self, consultation_id: str | None) -> list[str]:
+        """The consultation's names and the spellings its practitioner taught, for the speech
+        model. None when they cannot be had: the transcript is still made, only less well."""
+        if not consultation_id:
+            return []
+        try:
+            answer = self.main.rpc("engine_hints", {"p_consultation_id": consultation_id})
+        except Exception as exc:
+            log_event("hints.unavailable", exception_type=type(exc).__name__)
+            return []
+        return [str(hint) for hint in answer.get("hints", [])] if answer.get("ok") else []
 
     def _remove_live_file(self, path: str) -> None:
         try:
@@ -461,12 +476,17 @@ class Engine:
         try:
             paths = self._fetch(job, workdir, heartbeat)
             language = None if job["language"] == "auto" else job["language"]
+            hints = self._hints(job["consultation_id"])
             results: dict[Speaker, TrackTranscription] = {}
             for speaker in SPEAKERS:
                 heartbeat.move_to(f"transcribing_{speaker}")
                 try:
                     results[speaker] = transcribe_track(
-                        paths[speaker], language, self.settings, heartbeat.stopped.is_set
+                        paths[speaker],
+                        language,
+                        self.settings,
+                        heartbeat.stopped.is_set,
+                        hints=hints,
                     )
                 except WorkerError as error:
                     raise WorkerError(error.category, speaker) from error
