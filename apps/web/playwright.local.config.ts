@@ -13,6 +13,7 @@ export default defineConfig({
     permissions: ["microphone", "camera"],
     launchOptions: {
       args: [
+        "--mute-audio", // the test call must not play through the speakers
         "--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream",
         `--use-file-for-fake-audio-capture=${fileURLToPath(new URL("../../packages/test-fixtures/audio/en-patient-sleep.wav", import.meta.url))}`,
       ],

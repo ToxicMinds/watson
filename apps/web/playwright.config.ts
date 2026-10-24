@@ -22,6 +22,9 @@ export default defineConfig({
         permissions: ["microphone", "camera"],
         launchOptions: {
           args: [
+            // Silent: the calls in these tests must not play through the computer's speakers (the
+            // owner heard them as a loud beep, 24 Oct). The fake microphone still feeds the call.
+            "--mute-audio",
             "--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream",
             `--use-file-for-fake-audio-capture=${fileURLToPath(new URL("../../packages/test-fixtures/audio/en-patient-sleep.wav", import.meta.url))}`,
           ],
@@ -35,7 +38,8 @@ export default defineConfig({
       use: {
         ...devices["Desktop Firefox"],
         launchOptions: {
-          firefoxUserPrefs: { "media.navigator.streams.fake": true, "media.navigator.permission.disabled": true },
+          // media.volume_scale 0: silent, as Chrome's --mute-audio above.
+          firefoxUserPrefs: { "media.navigator.streams.fake": true, "media.navigator.permission.disabled": true, "media.volume_scale": "0.0" },
         },
       },
     },
