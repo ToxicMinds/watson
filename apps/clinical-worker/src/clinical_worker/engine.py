@@ -214,6 +214,8 @@ class Engine:
         answer = self.main.rpc("engine_claim_live_piece", {})
         if not answer.get("ok"):
             raise RuntimeError(str(answer.get("error_category")))
+        for path in answer.get("remove") or []:  # pieces set aside unread: no audio left behind
+            self._remove_live_file(path)
         if answer.get("piece"):
             self.process_live_piece(answer["piece"])
             return True
@@ -255,10 +257,13 @@ class Engine:
             log_event("live_piece.failed", exception_type=type(exc).__name__)
             self.main.rpc("engine_live_piece_failed", {"p_id": piece["id"]})
         finally:
-            try:
-                self.main.remove(piece["storage_path"])
-            except Exception as exc:
-                log_event("live_piece.not_removed", exception_type=type(exc).__name__)
+            self._remove_live_file(piece["storage_path"])
+
+    def _remove_live_file(self, path: str) -> None:
+        try:
+            self.main.remove(path)
+        except Exception as exc:
+            log_event("live_piece.not_removed", exception_type=type(exc).__name__)
 
     def process_document(self, document: dict[str, Any]) -> None:
         ids: dict[str, str | int] = {
