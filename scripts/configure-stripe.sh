@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Connects the hosted project to Stripe (decision 0007). Run once the test secret key is in
+# Connects the hosted project to Stripe (decision 0007); Watson's own Stripe account since 24 Oct 2026. Run once the test secret key is in
 # ~/.config/watson/stripe-secret-key. Registers the webhook endpoint (once), keeps its signing
 # secret in ~/.config/watson/stripe-webhook-secret, and sets both as function secrets.
 set -euo pipefail
 : "${SUPABASE_ACCESS_TOKEN:?set by .envrc}" "${SUPABASE_PROJECT_REF:?set by .envrc}"
 dir="$HOME/.config/watson"
 key=$(cat "$dir/stripe-secret-key")
-case "$key" in sk_test_*) ;; *) echo "expected a test key (sk_test_...)"; exit 1 ;; esac
+case "$key" in sk_test_*|rk_test_*) ;; *) echo "expected a test key (sk_test_... or restricted rk_test_...)"; exit 1 ;; esac
 endpoint="https://$SUPABASE_PROJECT_REF.supabase.co/functions/v1/stripe-webhook"
 if [ ! -s "$dir/stripe-webhook-secret" ]; then
   curl -fsS https://api.stripe.com/v1/webhook_endpoints -u "$key:" \
