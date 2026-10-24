@@ -1,7 +1,7 @@
 """One track in, timed segments out, with faster-whisper loaded from disk only."""
 
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -45,8 +45,22 @@ def model_revision(settings: Settings) -> str | None:
     return marker.read_text().strip() or None if marker.is_file() else None
 
 
+def hotwords(vocabulary: str, hints: Sequence[str]) -> str | None:
+    """What the speech model listens for: the Ayurvedic terms, then the consultation's own names and
+    the spellings its practitioner taught (owner, 24 Oct). Each once."""
+    words: list[str] = []
+    for word in (w.strip() for w in [*vocabulary.split(","), *hints]):
+        if word and word.lower() not in (w.lower() for w in words):
+            words.append(word)
+    return ", ".join(words) or None
+
+
 def transcribe_track(
-    path: Path, language: str | None, settings: Settings, should_stop: Callable[[], bool]
+    path: Path,
+    language: str | None,
+    settings: Settings,
+    should_stop: Callable[[], bool],
+    hints: Sequence[str] = (),
 ) -> TrackTranscription:
     """Transcribes one speaker's audio. `language=None` means "mixed or unsure"."""
     if not settings.model_path.is_dir():
@@ -69,7 +83,7 @@ def transcribe_track(
             vad_filter=True,  # digital silence produces no text
             condition_on_previous_text=False,  # limits runaway repetition
             temperature=(0.0, 0.2, 0.4),  # at most three attempts per window
-            hotwords=settings.vocabulary or None,  # Ayurvedic terms, so "abhyanga" is not "piano"
+            hotwords=hotwords(settings.vocabulary, hints),  # so "abhyanga" is not "piano"
         )
         segments = []
         for raw in raw_segments:  # lazy: decoding happens as we iterate

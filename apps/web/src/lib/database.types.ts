@@ -523,8 +523,10 @@ export type Database = {
         Row: {
           claimed_at: string | null
           consultation_id: string
+          corrected_at: string | null
           created_at: string
           engine_user_id: string | null
+          heard_text: string | null
           id: string
           offset_seconds: number
           seq: number
@@ -536,8 +538,10 @@ export type Database = {
         Insert: {
           claimed_at?: string | null
           consultation_id: string
+          corrected_at?: string | null
           created_at?: string
           engine_user_id?: string | null
+          heard_text?: string | null
           id?: string
           offset_seconds: number
           seq: number
@@ -549,8 +553,10 @@ export type Database = {
         Update: {
           claimed_at?: string | null
           consultation_id?: string
+          corrected_at?: string | null
           created_at?: string
           engine_user_id?: string | null
+          heard_text?: string | null
           id?: string
           offset_seconds?: number
           seq?: number
@@ -728,6 +734,51 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      spellings: {
+        Row: {
+          consultation_id: string
+          created_at: string
+          heard: string
+          id: string
+          patient_id: string | null
+          practitioner_id: string
+          written: string
+        }
+        Insert: {
+          consultation_id: string
+          created_at?: string
+          heard: string
+          id?: string
+          patient_id?: string | null
+          practitioner_id: string
+          written: string
+        }
+        Update: {
+          consultation_id?: string
+          created_at?: string
+          heard?: string
+          id?: string
+          patient_id?: string | null
+          practitioner_id?: string
+          written?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spellings_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spellings_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transcript_segments: {
         Row: {
@@ -1026,6 +1077,14 @@ export type Database = {
         Returns: Json
       }
       confirm_document: { Args: { p_document_id: string }; Returns: Json }
+      correct_live_line: {
+        Args: { p_piece_id: string; p_spellings?: Json; p_text: string }
+        Returns: Json
+      }
+      correct_transcript_line: {
+        Args: { p_segment_id: string; p_spellings?: Json; p_text: string }
+        Returns: Json
+      }
       create_consultation: {
         Args: {
           p_consent_recorded: boolean
@@ -1104,6 +1163,7 @@ export type Database = {
         }
         Returns: Json
       }
+      engine_hints: { Args: { p_consultation_id: string }; Returns: Json }
       engine_live_piece_done: {
         Args: { p_id: string; p_text: string }
         Returns: Json

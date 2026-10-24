@@ -22,6 +22,7 @@ from supabase import Client, ClientOptions, create_client
 from clinical_worker.config import Settings
 from clinical_worker.engine import Engine
 from clinical_worker.errors import ErrorCategory, WorkerError
+from clinical_worker.transcribe import TrackTranscription
 
 REPO = Path(__file__).resolve().parents[3]
 HOME = Path.home() / ".local" / "share" / "watson"
@@ -550,6 +551,51 @@ def test_a_live_piece_becomes_text_for_the_call_screen_and_is_removed(
     assert len(rows[0]["text"].split()) >= 3
     with pytest.raises(StorageException):  # removed once read
         _admin().storage.from_("audio").download(path)
+
+
+def test_the_speech_model_is_told_the_names_and_spellings_of_the_consultation(
+    engine: Engine, cara: tuple[str, str, Client], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Owner, 24 Oct: the doctor corrects a misheard name; Watson then listens for it.
+    _no_live_pieces()
+    user_id, _, client = cara
+    contact = f"+421905{random.randint(100000, 999999)}"
+    created = _data(
+        client.rpc(
+            "create_consultation",
+            {
+                "p_scheduled_at": "2026-10-24T10:00:00Z",
+                "p_language": "en",
+                "p_consent_recorded": True,
+                "p_patient_name": "Jana Nováková",
+                "p_patient_contact": contact,
+            },
+        )
+    )
+    path = f"{user_id}/{created['consultation_id']}/live/patient-0"
+    client.storage.from_("audio").upload(path, SPEECH, {"content-type": "audio/wav"})
+    client.rpc(
+        "add_live_piece",
+        {
+            "p_consultation_id": created["consultation_id"],
+            "p_speaker": "patient",
+            "p_seq": 0,
+            "p_offset_seconds": 0,
+        },
+    ).execute()
+    told: list[list[str]] = []
+
+    def listening(
+        path: Path, language: str | None, settings: Settings, should_stop: Any, hints: list[str]
+    ) -> TrackTranscription:
+        told.append(hints)
+        return TrackTranscription(
+            segments=[], language="en", language_probability=None, duration_seconds=1.0
+        )
+
+    monkeypatch.setattr("clinical_worker.engine.transcribe_track", listening)
+    assert engine.run_once()
+    assert told and "Jana Nováková" in told[0]
 
 
 def test_a_live_piece_comes_before_a_queued_transcript(

@@ -240,7 +240,10 @@ function ConsultationView({ userId }: { userId: string }) {
 
       <WhatsAppPanel consultationId={consultation.id} />
 
-      {HAS_TRANSCRIPT.includes(status) && <TranscriptView consultationId={consultation.id} language={language} />}
+      {HAS_TRANSCRIPT.includes(status) && (
+        <TranscriptView consultationId={consultation.id} language={language}
+          editable={!["approved", "corrected", "archived"].includes(status)} />
+      )}
 
 
       {(status === "transcription_processing" || HAS_TRANSCRIPT.includes(status)) && tracks.length > 0 && (

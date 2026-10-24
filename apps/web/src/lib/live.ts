@@ -21,11 +21,15 @@ export function livePieceSender(userId: string, consultationId: string): LivePie
   };
 }
 
-export type LiveLine = { speaker: "practitioner" | "patient"; seq: number; offset_seconds: number; text: string };
+export type LiveLine = {
+  id: string; speaker: "practitioner" | "patient"; seq: number; offset_seconds: number; text: string;
+  /** What the engine wrote, once the line was corrected (owner, 24 Oct). */
+  heard_text: string | null;
+};
 
 /** What the engine has written so far, in the order it was said. */
 export async function liveLines(consultationId: string): Promise<LiveLine[]> {
-  const { data } = await supabase.from("live_pieces").select("speaker, seq, offset_seconds, text")
+  const { data } = await supabase.from("live_pieces").select("id, speaker, seq, offset_seconds, text, heard_text")
     .eq("consultation_id", consultationId).eq("status", "done").order("offset_seconds");
   return ((data ?? []) as LiveLine[]).filter((line) => line.text);
 }

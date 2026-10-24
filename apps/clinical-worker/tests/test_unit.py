@@ -462,3 +462,13 @@ def test_the_engines_commands_load_outside_the_repository() -> None:
     finally:
         shutil.rmtree(shallow)
     assert loaded.returncode == 0, loaded.stderr[-300:]
+
+
+def test_the_speech_model_hears_the_ayurvedic_terms_and_the_consultations_own_names() -> None:
+    from clinical_worker.transcribe import hotwords
+
+    assert (
+        hotwords("Ayurveda, dosha", ["Jana Nováková", "dosha", ""])
+        == "Ayurveda, dosha, Jana Nováková"
+    )
+    assert hotwords("", []) is None
