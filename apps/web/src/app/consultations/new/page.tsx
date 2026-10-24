@@ -10,13 +10,16 @@ import { z } from "@/lib/zod";
 import { AppShell } from "@/components/app-shell";
 import { FieldError, Notice } from "@/components/status";
 import { call, explain } from "@/lib/api";
+import { asClock, asDayMonthYear, fromDayAndClock } from "@/lib/dates";
 import { feeSchema, toCents } from "@/lib/fee";
 import { RequireSession } from "@/lib/session";
 import { LANGUAGE_LABEL } from "@/lib/status";
 import { supabase } from "@/lib/supabase";
 
 const schema = z.object({
-  scheduled_at: z.string().min(1, "Choose the date and time of the consultation."),
+  // Typed, not the browser's own date field, which an American browser draws month first (owner, 24 Oct).
+  day: z.string().refine((day) => fromDayAndClock(day, "12:00") !== null, "Write the date as day/month/year, like 27/10/2026."),
+  clock: z.string().refine((clock) => fromDayAndClock("1/1/2026", clock) !== null, "Write the time on the 24-hour clock, like 14:30."),
   language: z.enum(["en", "de", "sk", "auto"], "Choose the language of the consultation."),
   consent_recorded: z.boolean(),
   scenario_notes: z.string().max(500, "Keep the notes under 500 characters."),
@@ -51,7 +54,7 @@ function NewConsultation() {
     formState: { errors, isSubmitting },
   } = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { scheduled_at: "", language: "en", consent_recorded: true, scenario_notes: "", fee: "", patient_name: "", patient_contact: "" },
+    defaultValues: { day: "", clock: "", language: "en", consent_recorded: true, scenario_notes: "", fee: "", patient_name: "", patient_contact: "" },
   });
 
   useEffect(() => {
@@ -60,16 +63,15 @@ function NewConsultation() {
   }, []);
 
   useEffect(() => {
-    // Now, in the viewer's own time zone, in the form the date-time field expects.
     const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    setValue("scheduled_at", now.toISOString().slice(0, 16));
+    setValue("day", asDayMonthYear(now));
+    setValue("clock", asClock(now));
   }, [setValue]);
 
   async function create(values: Values) {
     setFailure(null);
     const outcome = await call<{ consultation_id: string }>("create_consultation", {
-      p_scheduled_at: new Date(values.scheduled_at).toISOString(),
+      p_scheduled_at: fromDayAndClock(values.day, values.clock)!.toISOString(),
       p_language: values.language,
       p_consent_recorded: values.consent_recorded,
       p_scenario_notes: values.scenario_notes,
@@ -122,10 +124,16 @@ function NewConsultation() {
 
             <div className="wa-fields-row">
               <div className="wa-field">
-                <label className="wa-label" htmlFor="when">Date and time</label>
-                <input id="when" type="datetime-local" className="wa-input" aria-invalid={Boolean(errors.scheduled_at)}
-                  aria-describedby="when-error" {...register("scheduled_at")} />
-                <FieldError id="when-error" message={errors.scheduled_at?.message} />
+                <label className="wa-label" htmlFor="day">Date (day/month/year)</label>
+                <input id="day" className="wa-input" autoComplete="off" placeholder="27/10/2026" aria-invalid={Boolean(errors.day)}
+                  aria-describedby="day-error" {...register("day")} />
+                <FieldError id="day-error" message={errors.day?.message} />
+              </div>
+              <div className="wa-field">
+                <label className="wa-label" htmlFor="clock">Time (24-hour)</label>
+                <input id="clock" className="wa-input" autoComplete="off" placeholder="14:30" aria-invalid={Boolean(errors.clock)}
+                  aria-describedby="clock-error" {...register("clock")} />
+                <FieldError id="clock-error" message={errors.clock?.message} />
               </div>
               <div className="wa-field">
                 <label className="wa-label" htmlFor="language">Language spoken</label>
