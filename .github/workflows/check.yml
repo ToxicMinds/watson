@@ -52,5 +52,5 @@ jobs:
         working-directory: apps/web
         run: |
           pnpm build
-          pnpm exec playwright install --with-deps chromium
+          pnpm exec playwright install --with-deps chromium firefox
           pnpm exec playwright test --grep-invert "real engine"

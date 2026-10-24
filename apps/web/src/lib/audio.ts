@@ -19,6 +19,19 @@ export function formatOfRecording(mediaType: string): AudioFormat {
   return FORMATS.find((format) => mediaType.includes(format)) ?? "webm";
 }
 
+/**
+ * The format, from a file's first bytes. Browsers do not always label what they record: Firefox
+ * leaves its Ogg recordings unlabelled (owner's test of 24 Oct), and the label decides the upload.
+ */
+export function formatOfContent(head: Uint8Array): AudioFormat | null {
+  const text = (from: number, length: number) => String.fromCharCode(...head.subarray(from, from + length));
+  if (text(0, 4) === "OggS") return "ogg";
+  if (head[0] === 0x1a && head[1] === 0x45 && head[2] === 0xdf && head[3] === 0xa3) return "webm";
+  if (text(4, 4) === "ftyp") return "m4a";
+  if (text(0, 4) === "RIFF" && text(8, 4) === "WAVE") return "wav";
+  return null;
+}
+
 export async function sha256Hex(blob: Blob): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
