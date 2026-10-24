@@ -6,7 +6,7 @@ export const env = (name: string) => Deno.env.get(name) ?? "";
 
 /** The web app's own addresses. Only these may call a function from a browser; the first is where links point. */
 export const SITES = env("SITE_URLS").split(",").map((site) => site.trim()).filter(Boolean);
-export const SITE = SITES[0] ?? "https://watson-app.onrender.com";
+export const SITE = SITES[0] ?? "https://watson-assists.onrender.com";
 
 // The service key reaches the server-only database functions. Nothing it reads goes to a browser unchecked.
 export const admin = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false } });

@@ -34,7 +34,7 @@ Nothing in this project may be charged for (specification, section 3).
     (cd apps/clinical-worker && uv run clinical-worker fetch-form-model)   # 2.7 GB, fills in forms
 
 Patient payment needs a Stripe test key on the hosted project (`supabase secrets set
-STRIPE_SECRET_KEY=... STRIPE_WEBHOOK_SECRET=... SITE_URLS=https://watson-app.onrender.com`)
+STRIPE_SECRET_KEY=... STRIPE_WEBHOOK_SECRET=... SITE_URLS=https://watson-assists.onrender.com`)
 and a webhook endpoint at `<project>/functions/v1/stripe-webhook` (decision 0007).
 
 ## Check everything
@@ -65,7 +65,7 @@ Hosted sign-in rules (no public sign-up, 12-character passwords) are applied wit
 
     git push origin main
     scripts/deploy-web.sh                  # builds on Render from main and waits until it is live
-    (cd apps/web && E2E_BASE_URL=https://watson-app.onrender.com E2E_EMAIL=... E2E_PASSWORD=... pnpm exec playwright test)
+    (cd apps/web && E2E_BASE_URL=https://watson-assists.onrender.com E2E_EMAIL=... E2E_PASSWORD=... pnpm exec playwright test)
 
 The last line drives the live app in a browser with a dedicated test account, never the
 owner's.

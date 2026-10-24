@@ -3,23 +3,21 @@
 # Render only deploys by itself when its GitHub app is installed on the repository;
 # until then this script is how a deploy is triggered.
 #
-# The site was created once with:
-#   render services create --name watson-app --type static_site \
-#     --repo https://github.com/ToxicMinds/watson --branch main \
-#     --build-command "npx --yes pnpm@11.5.2 install --frozen-lockfile && npx --yes pnpm@11.5.2 --filter web build" \
-#     --publish-directory apps/web/out \
-#     --env-var NODE_VERSION=24.11.1 \
-#     --env-var NEXT_PUBLIC_SUPABASE_URL=https://mconctpleszerqhgaarj.supabase.co \
-#     --env-var NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<the project's publishable key>
-# and given these response headers for every path: Content-Security-Policy:
-# frame-ancestors 'none'; X-Frame-Options: DENY; X-Content-Type-Options: nosniff;
-# Referrer-Policy: no-referrer (set through the API: POST /v1/services/<id>/headers).
-# Short links: a rewrite /j/* -> /j/index.html (POST /v1/services/<id>/routes), so /j/K7P4QX9M
-# serves the page that opens the patient's link (apps/web/public/serve.json does the same locally).
-# The old address, eheal-app.onrender.com (srv-db79jlivcj2c73cpibsg), now publishes only
-# robots.txt and redirects /* to the same path here.
+# The site is Watson's own (Render account watson.assists@gmail.com, since 24 Oct 2026), created
+# once through the API (POST /v1/services) as a static site named watson-assists:
+#   repo https://github.com/watson-assists/watson, branch main, auto-deploy off,
+#   build "npx --yes pnpm@11.5.2 install --frozen-lockfile && npx --yes pnpm@11.5.2 --filter web build",
+#   publish apps/web/out, env NODE_VERSION=24.11.1, NEXT_PUBLIC_SUPABASE_URL and
+#   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (the project's publishable key);
+#   headers for /*: Content-Security-Policy: frame-ancestors 'none'; X-Frame-Options: DENY;
+#   X-Content-Type-Options: nosniff; Referrer-Policy: no-referrer;
+#   short links: a rewrite /j/* -> /j/index.html, so /j/K7P4QX9M serves the page that opens the
+#   patient's link (apps/web/public/serve.json does the same locally).
+# Its address is https://watson-assists.onrender.com. Until 24 Oct it was watson-app.onrender.com
+# under the owner's own Render account; Render keeps that name, so old links there no longer open.
+export RENDER_CLI_CONFIG_PATH="${RENDER_CLI_CONFIG_PATH:-$HOME/.render/profiles/watson-assists.yaml}"
 set -euo pipefail
-service=${WATSON_RENDER_SERVICE:-srv-db7m2kq5b2lc738el7lg}
+service=${WATSON_RENDER_SERVICE:-srv-dbedrugm7kps73diurlg}
 render deploys create "$service" --confirm -o json >/dev/null
 for _ in $(seq 1 90); do
   status=$(render deploys list "$service" -o json --confirm | python3 -c "import json,sys; d=json.load(sys.stdin)[0]; print(d.get('deploy', d).get('status'))")

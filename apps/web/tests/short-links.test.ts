@@ -1,5 +1,5 @@
 // Short links (owner, 16 October): a link the practitioner can read out or type. Watson's own,
-// not a public shortener: watson-app.onrender.com/j/K7P4QX9M opens the patient's page. Eight
+// not a public shortener: watson-assists.onrender.com/j/K7P4QX9M opens the patient's page. Eight
 // characters without look-alikes (no 0, O, 1 or I); typed in any case, with spaces or dashes.
 import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
