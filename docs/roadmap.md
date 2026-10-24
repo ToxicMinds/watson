@@ -3,7 +3,7 @@
 The plan is defined in [MASTER_BUILD_SPEC.md](../MASTER_BUILD_SPEC.md), section 21.
 This file only tracks where we are. Update it at the end of every slice.
 
-Last updated: 16 October 2026 (order changed by [decision 0005](decision-log/0005-call-to-form.md); payment added by [decision 0007](decision-log/0007-patient-payment.md); the engine and WhatsApp moved by [decision 0009](decision-log/0009-cloud-engine-and-whatsapp-gateway.md)).
+Last updated: 24 October 2026 (order changed by [decision 0005](decision-log/0005-call-to-form.md); payment added by [decision 0007](decision-log/0007-patient-payment.md); the engine and WhatsApp moved by [decision 0009](decision-log/0009-cloud-engine-and-whatsapp-gateway.md); prices, dates and Google Calendar on 24 October).
 
 | Slice | When it is done, you can | Status |
 |---|---|---|
@@ -14,12 +14,12 @@ Last updated: 16 October 2026 (order changed by [decision 0005](decision-log/000
 | 1.3 Transcription with a status screen | Press start, watch each stage, read a merged two-speaker transcript | Done, live 14 Oct |
 | 1.4 Consultation room (moved up, decision 0005) | Start a video call, send the patient a link, both voices recorded; transcription starts when the call ends | Done, live 14 Oct |
 | 1.5 AI fills the doctor's form (decision 0005) | Read the doctor's questionnaire filled in from the conversation, each answer with its quote; a suggested diagnosis; check and approve | Done, live 14 Oct |
-| 1.5b Patient payment (decision 0007) | Set a fee; the patient pays on Stripe Checkout from their link, then joins; see "Paid" | Live 14 Oct (Stripe test mode); a test-card payment passes against the hosted app |
+| 1.5b Patient payment (decision 0007) | Set a fee; the patient pays on Stripe Checkout from their link, then joins; see "Paid" | Live 14 Oct (Stripe test mode); a test-card payment passes against the hosted app. 24 Oct: usual fee, any fee per consultation, 0 for free, Make it free |
 | 1.6 Transcript review | Search, play back, correct, mark reviewed, export, delete audio | Folded into 1.5 where the form needs it |
 | 1.7 Fixtures and benchmark | Read measured accuracy and speed per language | Started 14 Oct (first measurements below) |
-| 1.8 Booking and the front page (owner, 16 Oct) | Patients find a practitioner and book a time; practitioners open hours in Calendar; reminders, short links, fill in again | Live 16 Oct; Google Calendar built, not yet connected |
+| 1.8 Booking and the front page (owner, 16 Oct) | Patients find a practitioner and book a time; practitioners open hours in Practice; reminders, short links, fill in again | Live 16 Oct. Google Calendar connected 24 Oct in Google's Testing mode: listed accounts only, reconnect every 7 days until a privacy page lets it be published |
 | 1.9 The engine in the cloud (decision 0009) | Transcripts, documents and forms are made with the laptop off, on Modal, started by the database | Live 16 Oct |
-| 1.10 Watson's own WhatsApp (decision 0009) | Patients link their number and send photos; a reminder before the call | Built 16 Oct; waits for its Google Cloud machine |
+| 1.10 Watson's own WhatsApp (decision 0009) | Patients link their number and send photos; a reminder before the call | Live 16 Oct on Render's free plan |
 | **Phase 2 — Structured draft, approval and report** | | Not started |
 | 2.1 Draft generation | Generate a structured draft in which every item shows its evidence | Not started |
 | 2.2 Draft review | Accept, edit, reject and add items in a split view | Not started |
@@ -37,7 +37,9 @@ Last updated: 16 October 2026 (order changed by [decision 0005](decision-log/000
 |---|---|---|
 | Web app | Render static site | Free |
 | Sign-in, database, audio files | Supabase project `watson` (ref `mconctpleszerqhgaarj`), Frankfurt | Free |
-| Transcription engine | The owner's computer | Free |
+| Transcription engine | Modal, started by the database (decision 0009) | Free: 3 hours a month |
+| WhatsApp gateway | Render web service `watson-whatsapp` | Free |
+| Google sign-in for calendars | Google Cloud project `watson-512614`, no billing | Free |
 
 ## Slice 1.3 — done 14 October
 
@@ -93,6 +95,8 @@ edge functions (`payment`, `stripe-webhook`). Left over:
 
 - [x] Stripe test key and webhook secret set on the hosted project; live test-card payment passes (14 Oct).
 - [ ] Refuse an unpaid link in the call handshake, not only on the page (before Gate R).
+- [x] Usual fee in Practice; any fee per consultation, 0 for free; Make it free (24 Oct, decision 0007 rows 8 and 9).
+- [ ] A patient paying at the moment the fee is waived is charged but not recorded: refund in Stripe (before Gate R).
 - [ ] Paying practitioners directly (Stripe Connect), refunds, invoices.
 
 ## Raised by the owner on 14 October
