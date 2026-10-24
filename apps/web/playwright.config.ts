@@ -14,6 +14,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: /firefox/,
       use: {
         ...devices["Desktop Chrome"],
         // A synthetic microphone, so recording can be tested without a person.
@@ -24,6 +25,17 @@ export default defineConfig({
             "--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream",
             `--use-file-for-fake-audio-capture=${fileURLToPath(new URL("../../packages/test-fixtures/audio/en-patient-sleep.wav", import.meta.url))}`,
           ],
+        },
+      },
+    },
+    {
+      // The call in Firefox, which records Ogg and labels it differently (owner's test of 24 Oct).
+      name: "firefox",
+      testMatch: /firefox/,
+      use: {
+        ...devices["Desktop Firefox"],
+        launchOptions: {
+          firefoxUserPrefs: { "media.navigator.streams.fake": true, "media.navigator.permission.disabled": true },
         },
       },
     },
