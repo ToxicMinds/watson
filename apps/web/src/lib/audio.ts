@@ -32,6 +32,12 @@ export function formatOfContent(head: Uint8Array): AudioFormat | null {
   return null;
 }
 
+/** A recording ready to upload: its format from its first bytes (else `fallback`) and the label to match. */
+export async function labelled(blob: Blob, fallback: AudioFormat): Promise<{ file: Blob; format: AudioFormat }> {
+  const format = formatOfContent(new Uint8Array(await blob.slice(0, 12).arrayBuffer())) ?? fallback;
+  return { file: new Blob([blob], { type: mimeOf(format) }), format };
+}
+
 export async function sha256Hex(blob: Blob): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");

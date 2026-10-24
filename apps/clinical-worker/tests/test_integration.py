@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from storage3.utils import StorageException
 from supabase import Client, ClientOptions, create_client
 
 from clinical_worker.config import Settings
@@ -493,3 +494,74 @@ def test_a_document_the_patient_sends_is_read_and_quoted_in_the_form(
             {"document_id": added["document_id"], "page": 1, "text": "Ferritin 9 ug/L, low."}
         ],
     }
+
+
+# The live transcript during the call (owner, 24 October): ten-second pieces of each voice, read
+# before any other work, their text for the call screen, the piece removed once read.
+def _no_live_pieces() -> None:
+    subprocess.run(
+        ["docker", "exec", "-i", "supabase_db_watson", "psql", "-U", "postgres", "-q"],
+        input="update public.live_pieces set status = 'failed' where status in ('waiting', 'reading');",
+        text=True,
+        check=True,
+    )
+
+
+def _live_piece(cara: tuple[str, str, Client], data: bytes) -> tuple[str, str]:
+    user_id, _, client = cara
+    created = _data(
+        client.rpc(
+            "create_consultation",
+            {
+                "p_scheduled_at": "2026-10-24T10:00:00Z",
+                "p_language": "en",
+                "p_consent_recorded": True,
+            },
+        )
+    )
+    consultation_id: str = created["consultation_id"]
+    path = f"{user_id}/{consultation_id}/live/patient-0"
+    client.storage.from_("audio").upload(path, data, {"content-type": "audio/wav"})
+    added = _data(
+        client.rpc(
+            "add_live_piece",
+            {
+                "p_consultation_id": consultation_id,
+                "p_speaker": "patient",
+                "p_seq": 0,
+                "p_offset_seconds": 0,
+            },
+        )
+    )
+    assert added == {"ok": True}, added
+    return consultation_id, path
+
+
+def test_a_live_piece_becomes_text_for_the_call_screen_and_is_removed(
+    engine: Engine, cara: tuple[str, str, Client]
+) -> None:
+    _no_live_pieces()
+    consultation_id, path = _live_piece(cara, SPEECH)
+    assert engine.run_once()
+    rows = _data(
+        cara[2].table("live_pieces").select("status, text").eq("consultation_id", consultation_id)
+    )
+    assert rows[0]["status"] == "done"
+    assert len(rows[0]["text"].split()) >= 3
+    with pytest.raises(StorageException):  # removed once read
+        _admin().storage.from_("audio").download(path)
+
+
+def test_a_live_piece_comes_before_a_queued_transcript(
+    engine: Engine, cara: tuple[str, str, Client]
+) -> None:
+    _no_live_pieces()
+    queued = _queue(cara, SPEECH, SPEECH)
+    consultation_id, _ = _live_piece(cara, SILENCE)
+    assert engine.run_once()
+    piece = _data(
+        cara[2].table("live_pieces").select("status, text").eq("consultation_id", consultation_id)
+    )
+    assert piece == [{"status": "done", "text": ""}]  # silence: nothing to show
+    job = _data(cara[2].table("transcription_jobs").select("status").eq("consultation_id", queued))
+    assert job == [{"status": "queued"}]

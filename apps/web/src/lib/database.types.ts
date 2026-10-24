@@ -519,6 +519,63 @@ export type Database = {
         }
         Relationships: []
       }
+      live_pieces: {
+        Row: {
+          claimed_at: string | null
+          consultation_id: string
+          created_at: string
+          engine_user_id: string | null
+          id: string
+          offset_seconds: number
+          seq: number
+          speaker: Database["public"]["Enums"]["speaker"]
+          status: string
+          storage_path: string
+          text: string | null
+        }
+        Insert: {
+          claimed_at?: string | null
+          consultation_id: string
+          created_at?: string
+          engine_user_id?: string | null
+          id?: string
+          offset_seconds: number
+          seq: number
+          speaker: Database["public"]["Enums"]["speaker"]
+          status?: string
+          storage_path: string
+          text?: string | null
+        }
+        Update: {
+          claimed_at?: string | null
+          consultation_id?: string
+          created_at?: string
+          engine_user_id?: string | null
+          id?: string
+          offset_seconds?: number
+          seq?: number
+          speaker?: Database["public"]["Enums"]["speaker"]
+          status?: string
+          storage_path?: string
+          text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_pieces_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_pieces_engine_user_id_fkey"
+            columns: ["engine_user_id"]
+            isOneToOne: false
+            referencedRelation: "engines"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       patient_documents: {
         Row: {
           claimed_at: string | null
@@ -934,6 +991,15 @@ export type Database = {
         }
         Returns: Json
       }
+      add_live_piece: {
+        Args: {
+          p_consultation_id: string
+          p_offset_seconds: number
+          p_seq: number
+          p_speaker: Database["public"]["Enums"]["speaker"]
+        }
+        Returns: Json
+      }
       approve_form: { Args: { p_form_id: string }; Returns: Json }
       book_time: {
         Args: {
@@ -980,6 +1046,7 @@ export type Database = {
       engine_claim_document: { Args: never; Returns: Json }
       engine_claim_form_job: { Args: never; Returns: Json }
       engine_claim_job: { Args: never; Returns: Json }
+      engine_claim_live_piece: { Args: never; Returns: Json }
       engine_complete_document: {
         Args: { p_attempt: number; p_document_id: string; p_pages: string[] }
         Returns: Json
@@ -1037,6 +1104,11 @@ export type Database = {
         }
         Returns: Json
       }
+      engine_live_piece_done: {
+        Args: { p_id: string; p_text: string }
+        Returns: Json
+      }
+      engine_live_piece_failed: { Args: { p_id: string }; Returns: Json }
       engine_run_finished: { Args: { p_run_id: string }; Returns: Json }
       engine_run_started: { Args: never; Returns: Json }
       engine_status: { Args: never; Returns: Json }
