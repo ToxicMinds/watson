@@ -12,23 +12,19 @@ dependencies = [
     "faster-whisper>=1.2.1",
     "pydantic>=2.14.1",
     "supabase>=2.32,<3",
-    "llama-cpp-python>=0.3.36",  # fills in forms with a local model (decision 0005)
+    # The v0.3.36 macOS ARM wheel is corrupt upstream; build its verified source archive instead.
+    "llama-cpp-python @ https://github.com/abetlen/llama-cpp-python/releases/download/v0.3.36/llama_cpp_python-0.3.36.tar.gz",
     "pypdfium2>=5.14",  # reads the text of PDFs the patient sends, and renders scanned pages
     "rapidocr>=3.10",  # reads photos and scans, with a Latin model that keeps diacritics
-    "pillow>=11",
+    "pillow>=13.0.0",
 ]
+
+[tool.uv]
+# Security floors for transitive packages used by HTTPS and Hugging Face model downloads.
+constraint-dependencies = ["certifi>=2026.10.19", "filelock>=4.2.1"]
 
 [project.scripts]
 clinical-worker = "clinical_worker.__main__:main"
-
-# Prebuilt CPU wheels, so installing never compiles llama.cpp.
-[tool.uv.sources]
-llama-cpp-python = { index = "llama-cpp-cpu" }
-
-[[tool.uv.index]]
-name = "llama-cpp-cpu"
-url = "https://abetlen.github.io/llama-cpp-python/whl/cpu"
-explicit = true
 
 [build-system]
 requires = ["uv_build>=0.10.12,<0.11.0"]
