@@ -1138,6 +1138,10 @@ export type Database = {
         Returns: Json
       }
       invite_details: { Args: { p_token: string }; Returns: Json }
+      make_consultation_free: {
+        Args: { p_consultation_id: string }
+        Returns: Json
+      }
       open_short_link: { Args: { p_code: string }; Returns: Json }
       patient_add_document: {
         Args: {

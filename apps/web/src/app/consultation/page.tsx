@@ -234,7 +234,7 @@ function ConsultationView({ userId }: { userId: string }) {
 
       {FORM_STATUSES.includes(status) && <FormPanel consultationId={consultation.id} status={status} onChanged={load} />}
 
-      {status !== "consent_withdrawn" && <PatientPanel consultation={consultation} patient={patient} />}
+      {status !== "consent_withdrawn" && <PatientPanel consultation={consultation} patient={patient} onChanged={load} />}
 
       {status !== "consent_withdrawn" && <DocumentsPanel consultationId={consultation.id} patient={patient} onChanged={load} />}
 

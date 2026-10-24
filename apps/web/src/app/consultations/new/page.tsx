@@ -11,7 +11,7 @@ import { AppShell } from "@/components/app-shell";
 import { FieldError, Notice } from "@/components/status";
 import { call, explain } from "@/lib/api";
 import { asClock, asDayMonthYear, fromDayAndClock } from "@/lib/dates";
-import { feeSchema, toCents } from "@/lib/fee";
+import { feeSchema, fromCents, toCents } from "@/lib/fee";
 import { RequireSession } from "@/lib/session";
 import { LANGUAGE_LABEL } from "@/lib/status";
 import { supabase } from "@/lib/supabase";
@@ -60,7 +60,11 @@ function NewConsultation() {
   useEffect(() => {
     // Patients seen before, suggested as the name is typed. Row-level security keeps them the practitioner's own.
     supabase.from("patients").select("name, phone, email").order("name").then(({ data }) => setKnown(data ?? []));
-  }, []);
+    // The usual fee, set in Practice, unless the practitioner has typed one already.
+    supabase.from("practitioner_profiles").select("fee_cents").maybeSingle().then(({ data }) => {
+      if (data?.fee_cents && !getValues("fee")) setValue("fee", fromCents(data.fee_cents));
+    });
+  }, [getValues, setValue]);
 
   useEffect(() => {
     const now = new Date();
@@ -154,7 +158,7 @@ function NewConsultation() {
 
             <div className="wa-field">
               <label className="wa-label" htmlFor="fee">Fee</label>
-              <p className="wa-hint" id="fee-hint">The patient pays this when they open your link, before the call. Leave it empty for a free consultation.</p>
+              <p className="wa-hint" id="fee-hint">The patient pays this when they open your link, before the call. It starts at your usual fee, set in Practice; 0 makes the consultation free, with no payment.</p>
               <div className="wa-affixed" style={{ maxWidth: 200 }}>
                 <span className="wa-affix" aria-hidden>€</span>
                 <input id="fee" className="wa-input" inputMode="decimal" autoComplete="off" placeholder="40.00"

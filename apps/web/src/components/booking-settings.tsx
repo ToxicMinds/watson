@@ -7,7 +7,7 @@ import { CopyButton } from "@/components/copy-button";
 import { FieldError, Notice } from "@/components/status";
 import { call, explain } from "@/lib/api";
 import { HOUR_CHOICES, WEEKDAYS, type Hours, type OwnPage } from "@/lib/booking";
-import { feeSchema, fromCents, toCents } from "@/lib/fee";
+import { FEE_RULE, feeSchema, fromCents, toCents } from "@/lib/fee";
 import { LANGUAGE_LABEL, type ConsultationLanguage } from "@/lib/status";
 
 // The hours patients can book and the page they see (design system: ScreenCalendar).
@@ -21,7 +21,7 @@ const FIELD: Record<string, string> = {
   display_name: "Enter the name patients should see.",
   hours: "Each day needs a start before its end.",
   languages: "Choose the languages you consult in.",
-  fee_cents: "Enter an amount between 0.50 and 1000, for example 40 or 40.00, or leave it empty.",
+  fee_cents: FEE_RULE,
 };
 
 /** quietSave: another button on the screen is the one next step (Connect Google Calendar). */
@@ -113,7 +113,7 @@ export function BookingSettings({ page, aside, quietSave, onSaved }: {
               </div>
             </div>
             <div className="wa-field">
-              <label className="wa-label" htmlFor="fee">Fee</label>
+              <label className="wa-label" htmlFor="fee">Usual fee</label>
               <div className="wa-affixed">
                 <span className="wa-affix" aria-hidden>€</span>
                 <input id="fee" className="wa-input" inputMode="decimal" autoComplete="off" placeholder="40.00" value={fee}
@@ -122,7 +122,7 @@ export function BookingSettings({ page, aside, quietSave, onSaved }: {
               <FieldError id="fee-error" message={error("fee_cents")} />
             </div>
           </div>
-          <p className="wa-hint">Leave the fee empty for free consultations. Patients pay it when they book.</p>
+          <p className="wa-hint">Patients who book on your page pay your usual fee. Each consultation you create starts with it, and you can change it there. 0 or empty is free.</p>
         </section>
 
         <div style={{ display: "grid", gap: 24, alignContent: "start" }}>

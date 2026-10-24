@@ -28,6 +28,7 @@ const MESSAGE: Record<string, string> = {
   CONSENT_MISSING: "Record consent before attaching audio.",
   INVALID_STATE_TRANSITION: "That is not possible at this stage of the consultation. Reload the page to see where it stands.",
   NOT_FOUND: "This consultation does not exist, or it is not yours.",
+  TIME_TAKEN: "Another patient booked this time after it stopped waiting for this payment. Create a new consultation for this patient.",
   FORM_NOT_REVIEWED: "Check every answer first: accept, edit or reject it.",
   FORM_TEMPLATE_MISSING: "Your form is not set up yet, so there is nothing to fill in.",
   NOT_SIGNED_IN: "You are signed out. Sign in again.",
