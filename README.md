@@ -51,6 +51,10 @@ unless their test keys are added: see [docs/run-locally.md](docs/run-locally.md)
 
 The web tests need the local stack to be running.
 
+## Security
+
+- [Security review (2026-10-18)](docs/security-review-2026-10-18.md): Six application findings with evidence, fixes and verification notes.
+
 ## Work on the web app
 
     cd apps/web && pnpm dev                # http://localhost:3000
