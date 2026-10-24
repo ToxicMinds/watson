@@ -56,7 +56,7 @@ function Calendar() {
     <>
       <div className="wa-pagehead">
         <div className="wa-pagehead__text">
-          <h1 className="wa-title">Calendar</h1>
+          <h1 className="wa-title">Practice</h1>
           <p className="wa-meta">
             Week of {WEEK_OF.format(monday)} · {week.open.length === 1 ? "one time" : `${week.open.length} times`} open for booking
             · {week.bookings.length} booked

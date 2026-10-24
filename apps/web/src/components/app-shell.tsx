@@ -10,7 +10,7 @@ import { supabase } from "@/lib/supabase";
 
 const NAV = [
   { href: "/consultations/", label: "Home", Icon: House },
-  { href: "/calendar/", label: "Calendar", Icon: CalendarDays },
+  { href: "/calendar/", label: "Practice", Icon: CalendarDays },
 ];
 
 /** Frame for every signed-in screen: the way around, who is signed in, and a way out. */

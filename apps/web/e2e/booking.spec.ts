@@ -8,9 +8,9 @@ test("a practitioner opens hours, a patient books one, the practitioner sees it"
   await signIn(page, account);
   await expect(page.getByText(/^Watson's laptop is (on|off)/)).toBeVisible();
 
-  // Calendar: no Google yet, so it offers to connect; then the hours and the page.
-  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Calendar" }).click();
-  await expect(page.getByRole("heading", { name: "Calendar", level: 1 })).toBeVisible();
+  // Practice: no Google yet, so it offers to connect; then the hours and the page.
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Practice" }).click();
+  await expect(page.getByRole("heading", { name: "Practice", level: 1 })).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect Google Calendar" })).toBeVisible();
   const hours = page.getByRole("region", { name: "Hours patients can book" });
   for (const day of ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]) {
@@ -58,7 +58,7 @@ test("a practitioner opens hours, a patient books one, the practitioner sees it"
   // Home names the booking; the calendar shows it in ink.
   await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Home" }).click();
   await expect(page.getByText(/^Next: /)).toContainText("Jana Nováková");
-  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Calendar" }).click();
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Practice" }).click();
   await expect(page.locator(".wa-block--booked", { hasText: "Jana Nováková" }).first()).toBeVisible();
   expect(problems).toEqual([]);
 });
