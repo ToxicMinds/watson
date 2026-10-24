@@ -43,7 +43,7 @@ Last updated: 24 October 2026 (order changed by [decision 0005](decision-log/000
 
 ## Slice 1.3 — done 14 October
 
-Live at https://watson-app.onrender.com, rebuilt on the design system
+Live at https://watson-assists.onrender.com, rebuilt on the design system
 (https://claude.ai/artifact/VwTRNADCcZnGHPHYK6spht). The engine runs on the owner's
 computer as a user service (`apps/clinical-worker/watson-engine.service`). Measured live:
 two 7.5-second tracks, start to transcript on screen in 16 seconds with the `small` model.

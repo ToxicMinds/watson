@@ -4,13 +4,13 @@
 # 2. Modal's two secrets (that account; the wake-up key);
 # 3. the deploy (apps/clinical-worker/modal_engine.py) and, the first time, the models;
 # 4. the wake-up address and key in the database's Vault, so queued work wakes the engine.
-# Uses the Modal profile `watson` (the owner's own account), never Synculariti's.
+# Uses the Modal profile `watson-assists` (Watson's own account since 24 Oct 2026), never Synculariti's.
 # usage: scripts/configure-cloud-engine.sh [--models]   (--models fetches the models again)
 set -euo pipefail
 : "${SUPABASE_ACCESS_TOKEN:?set by .envrc}" "${SUPABASE_PROJECT_REF:?set by .envrc}"
 dir="$HOME/.config/watson"
 set -a; . "$dir/supabase.env"; set +a
-export MODAL_PROFILE=watson
+export MODAL_PROFILE="${MODAL_PROFILE:-watson-assists}"
 cd "$(dirname "$0")/../apps/clinical-worker"
 modal() { uv run --with modal==1.6.2 modal "$@"; }
 sql() {

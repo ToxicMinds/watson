@@ -2,7 +2,8 @@
 # Lets the hosted database email the owner when Watson stops doing its work by itself (migration
 # 20261016160000): Resend's sending key and the owner's address go into the database's Vault.
 # Resend's free plan sends from onboarding@resend.dev only to the address its account was made
-# with, which is the owner's. Private files: ~/.config/watson/resend-api-key, owner-email.
+# with: Watson's own, watson.assists@gmail.com, since 24 Oct 2026. Private files:
+# ~/.config/watson/resend-api-key, owner-email.
 # usage: scripts/configure-owner-notices.sh [--test]   (--test sends one email now)
 set -euo pipefail
 : "${SUPABASE_ACCESS_TOKEN:?set by .envrc}" "${SUPABASE_PROJECT_REF:?set by .envrc}"
