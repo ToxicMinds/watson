@@ -1,5 +1,5 @@
 import { call, explain } from "./api";
-import { durationOf, formatOfContent, MAX_SECONDS, mimeOf, sha256Hex, type AudioFormat } from "./audio";
+import { durationOf, labelled, MAX_SECONDS, mimeOf, sha256Hex, type AudioFormat } from "./audio";
 import type { Database } from "./database.types";
 import { supabase } from "./supabase";
 
@@ -21,13 +21,12 @@ export async function attachAudio({ consultationId, userId, speaker, blob, forma
   const path = `${userId}/${consultationId}/${speaker}`;
   onStep?.("Reading the audio…");
   // The file's first bytes say what it is; the browser's label may be missing (Firefox, 24 Oct).
-  const actual = formatOfContent(new Uint8Array(await blob.slice(0, 12).arrayBuffer())) ?? format;
+  const { file, format: actual } = await labelled(blob, format);
   const [sha256, length] = await Promise.all([sha256Hex(blob), seconds ?? durationOf(blob)]);
   if (length !== null && length > MAX_SECONDS) return explain("AUDIO_DURATION_INVALID");
   onStep?.(`Uploading ${speaker} audio…`);
   // Clear anything an interrupted earlier attempt left at this path, then store the file.
   await supabase.storage.from("audio").remove([path]);
-  const file = new Blob([blob], { type: mimeOf(actual) }); // the label the upload is judged by
   const upload = await supabase.storage.from("audio").upload(path, file, { contentType: mimeOf(actual) });
   if (upload.error) return explain("STORAGE_UNAVAILABLE");
   onStep?.("Checking…");

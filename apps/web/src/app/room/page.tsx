@@ -11,11 +11,12 @@ import { call as rpc, explain } from "@/lib/api";
 import { clock } from "@/lib/audio";
 import { connect, patientLink, recordCall, type CallState, type Recording } from "@/lib/call";
 import type { Tables } from "@/lib/database.types";
+import { liveLines, livePieceSender, type LiveLine } from "@/lib/live";
 import { RequireSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 import { attachAudio } from "@/lib/tracks";
 
-type Loaded = { consultation: Tables<"consultations">; tracks: number };
+type Loaded = { consultation: Tables<"consultations"> & { patients: { name: string } | null }; tracks: number };
 const CAN_CALL = ["consent_pending", "ready_for_audio"];
 
 export default function RoomPage() {
@@ -52,6 +53,8 @@ function Room({ userId }: { userId: string }) {
   const [cameraOff, setCameraOff] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [recording, setRecording] = useState(false);
+  const [lines, setLines] = useState<LiveLine[]>([]);
+  const transcript = useRef<HTMLOListElement>(null);
   const localVideo = useRef<HTMLVideoElement>(null);
   const remoteVideo = useRef<HTMLVideoElement>(null);
   const session = useRef<{ leave(): Promise<void> } | null>(null);
@@ -61,7 +64,7 @@ function Room({ userId }: { userId: string }) {
   useEffect(() => {
     let current = true;
     Promise.all([
-      supabase.from("consultations").select("*").eq("id", id).maybeSingle(),
+      supabase.from("consultations").select("*, patients(name)").eq("id", id).maybeSingle(),
       supabase.from("audio_tracks").select("id", { count: "exact", head: true }).eq("consultation_id", id),
     ]).then(([consultation, tracks]) => {
       if (current) setLoaded(consultation.data ? { consultation: consultation.data, tracks: tracks.count ?? 0 } : "missing");
@@ -88,6 +91,18 @@ function Room({ userId }: { userId: string }) {
     void session.current?.leave();
   }, []);
 
+  // The live transcript: what the engine has written so far, every three seconds while the call runs.
+  const called = state !== null;
+  useEffect(() => {
+    if (!called) return;
+    const poll = setInterval(() => void liveLines(id).then(setLines), 3000);
+    return () => clearInterval(poll);
+  }, [called, id]);
+  useEffect(() => {
+    const list = transcript.current;
+    if (list) list.scrollTop = list.scrollHeight; // the newest words in view
+  }, [lines]);
+
   const back = (
     <Link href={`/consultation/?id=${id}`} className="wa-crumb"><ChevronLeft aria-hidden className="wa-icon wa-icon--sm" />Consultation</Link>
   );
@@ -97,7 +112,7 @@ function Room({ userId }: { userId: string }) {
   if (!state && !step && (loaded.tracks > 0 || !CAN_CALL.includes(consultation.status))) {
     return (
       <>{back}
-        <h1 className="wa-title">{consultation.synthetic_patient_ref}</h1>
+        <h1 className="wa-title">{consultation.patients?.name ?? consultation.synthetic_patient_ref}</h1>
         <Notice title="This consultation already has audio">A call can be recorded only before any audio is attached.</Notice>
       </>
     );
@@ -120,7 +135,7 @@ function Room({ userId }: { userId: string }) {
     if (localVideo.current) localVideo.current.srcObject = local;
     const invite = consultation.invite_token; // the link the patient already has
     setToken(invite);
-    const recording = recordCall(local);
+    const recording = recordCall(local, livePieceSender(userId, id));
     recorder.current = recording;
     session.current = connect({
       token: invite, role: "doctor", local,
@@ -182,10 +197,11 @@ function Room({ userId }: { userId: string }) {
       {back}
       <div className="wa-pagehead">
         <div className="wa-pagehead__text">
-          <h1 className="wa-title">{consultation.synthetic_patient_ref}</h1>
-          <p className="wa-meta">Video call. Both voices are recorded and transcribed when you end the call.</p>
+          <h1 className="wa-title">{consultation.patients?.name ?? consultation.synthetic_patient_ref}</h1>
+          <p className="wa-meta">Video call. Both voices are recorded, with a live transcript beside the video; the full transcript follows when you end the call.</p>
         </div>
       </div>
+      <div className="wa-room">
       <div className="wa-call">
         {link && live && (
           <div className="wa-field">
@@ -234,6 +250,28 @@ function Room({ userId }: { userId: string }) {
             {problem}
           </Notice>
         )}
+      </div>
+      {called && (
+        <aside className="wa-livetext" aria-labelledby="live-title">
+          <h2 className="wa-heading" id="live-title" style={{ color: "var(--ink)" }}>Live transcript</h2>
+          <p className="wa-hint">
+            {lines.length ? "About 15 seconds behind. The full transcript follows when you end the call."
+              : recording ? "Starting Watson's engine… the first words appear in about half a minute."
+              : "Starts when the patient joins."}
+          </p>
+          <ol ref={transcript} className="wa-livetext__lines" aria-live="polite">
+            {lines.map((line) => (
+              <li key={`${line.speaker}-${line.seq}`} className={`wa-quote wa-quote--${line.speaker}`}>
+                <div>
+                  <span className="wa-quote__who">{line.speaker === "practitioner" ? "You" : consultation.patients?.name ?? "Patient"}</span>
+                  <span className="wa-livetext__when">{clock(line.offset_seconds)}</span>
+                  <p className="wa-quote__text">{line.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </aside>
+      )}
       </div>
     </>
   );

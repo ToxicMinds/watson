@@ -118,21 +118,59 @@ export function connect({ token, role, local, onRemote, onState }: {
 
 export type Recording = { practitioner: Blob; patient: Blob; format: AudioFormat; seconds: number };
 
+/** One live piece of the call: a voice, its number in turn, and when it starts in the recording. */
+export type LivePiece = (speaker: "practitioner" | "patient", blob: Blob, seq: number, offsetSeconds: number) => void;
+const PIECE_MS = 10_000;
+
+/**
+ * Ten-second pieces of one voice, each a file of its own, for the live transcript (owner, 24 Oct:
+ * "like it happens in Teams"). Recorded beside the full track, which stays the one that counts.
+ */
+function pieces(stream: MediaStream, startedAt: number, onPiece: (blob: Blob, seq: number, offset: number) => void) {
+  let count = 0;
+  let current: MediaRecorder | null = null;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let running = true;
+  const next = () => {
+    if (!running) return;
+    const recorder = new MediaRecorder(stream, { audioBitsPerSecond: 32_000 });
+    const parts: Blob[] = [];
+    const seq = count++;
+    const offset = (performance.now() - startedAt) / 1000;
+    recorder.addEventListener("dataavailable", (event) => parts.push(event.data));
+    recorder.addEventListener("stop", () => onPiece(new Blob(parts, { type: recorder.mimeType }), seq, offset), { once: true });
+    recorder.start();
+    current = recorder;
+    timer = setTimeout(() => {
+      recorder.stop();
+      next();
+    }, PIECE_MS);
+  };
+  next();
+  return () => {
+    running = false;
+    clearTimeout(timer);
+    if (current?.state === "recording") current.stop();
+  };
+}
+
 /**
  * Records the call in the doctor's browser as two tracks on one clock: the doctor's microphone,
  * and whatever the patient's side sends. The patient's side goes through a mixer, so a
  * reconnection mid-call keeps recording into the same track.
  */
-export function recordCall(local: MediaStream) {
+export function recordCall(local: MediaStream, onPiece?: LivePiece) {
   const context = new AudioContext();
   const patientMix = context.createMediaStreamDestination();
   const options = { audioBitsPerSecond: 32_000 }; // speech needs little; the free storage is small
-  const practitioner = new MediaRecorder(new MediaStream(local.getAudioTracks()), options);
+  const doctorVoice = new MediaStream(local.getAudioTracks());
+  const practitioner = new MediaRecorder(doctorVoice, options);
   const patient = new MediaRecorder(patientMix.stream, options);
   const chunks = { practitioner: [] as Blob[], patient: [] as Blob[] };
   practitioner.addEventListener("dataavailable", (event) => chunks.practitioner.push(event.data));
   patient.addEventListener("dataavailable", (event) => chunks.patient.push(event.data));
   let started = 0;
+  let stopPieces: (() => void)[] = [];
 
   const stopped = (recorder: MediaRecorder) =>
     new Promise<void>((resolve) => {
@@ -157,10 +195,17 @@ export function recordCall(local: MediaStream) {
       practitioner.start(1000);
       patient.start(1000);
       started = performance.now();
+      if (onPiece) {
+        stopPieces = [
+          pieces(doctorVoice, started, (blob, seq, offset) => onPiece("practitioner", blob, seq, offset)),
+          pieces(patientMix.stream, started, (blob, seq, offset) => onPiece("patient", blob, seq, offset)),
+        ];
+      }
     },
     async stop(): Promise<Recording | null> {
       if (!started) return null;
       const seconds = (performance.now() - started) / 1000;
+      stopPieces.forEach((stop) => stop());
       await Promise.all([stopped(practitioner), stopped(patient)]);
       void context.close();
       const type = practitioner.mimeType;

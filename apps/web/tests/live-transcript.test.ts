@@ -1,0 +1,87 @@
+// The live transcript during the call (owner, 24 October: "like it happens in Teams", always on). The
+// doctor's browser sends each voice in ten-second pieces; the cloud engine turns each into text first,
+// before any other work, and removes the piece. A piece left over from an earlier call is not read.
+import { beforeAll, describe, expect, it } from "vitest";
+import { localStack, newEngine, newPractitioner, rpc, sqlAsOwner, type Practitioner } from "./local-stack";
+
+const stack = localStack();
+const OGG = Buffer.from("OggS fake opus piece");
+let eva: Practitioner;
+let engine: Practitioner;
+beforeAll(async () => {
+  [eva, engine] = await Promise.all([newPractitioner(stack, "live"), newEngine(stack, "live-engine")]);
+});
+
+async function consultation(consent = true) {
+  const made = await rpc(eva.client, "create_consultation", { p_scheduled_at: "2026-10-24T10:00:00Z", p_language: "sk", p_consent_recorded: consent });
+  return made.consultation_id!;
+}
+const pathOf = (id: string, speaker: string, seq: number) => `${eva.id}/${id}/live/${speaker}-${seq}`;
+async function send(id: string, speaker: "practitioner" | "patient", seq: number, offset: number) {
+  const upload = await eva.client.storage.from("audio").upload(pathOf(id, speaker, seq), OGG, { contentType: "audio/ogg" });
+  return { upload, added: await rpc(eva.client, "add_live_piece", { p_consultation_id: id, p_speaker: speaker, p_seq: seq, p_offset_seconds: offset }) };
+}
+/** Claims pieces until it gets one of this consultation's; others left by earlier runs are finished. */
+async function claim(id: string) {
+  for (let i = 0; i < 50; i++) {
+    const piece = (await rpc(engine.client, "engine_claim_live_piece")).piece as { id: string; storage_path: string; language: string | null; speaker: string } | null;
+    if (!piece) return null;
+    if (piece.storage_path.includes(id)) return piece;
+    await rpc(engine.client, "engine_live_piece_done", { p_id: piece.id, p_text: "" });
+  }
+  return null;
+}
+
+describe("a live piece", () => {
+  it("is sent by the doctor during a consented call and read by the engine, which then removes it", async () => {
+    const id = await consultation();
+    const { upload, added } = await send(id, "patient", 0, 0.4);
+    expect(upload.error).toBeNull();
+    expect(added).toEqual({ ok: true });
+    expect(await rpc(eva.client, "add_live_piece", { p_consultation_id: id, p_speaker: "patient", p_seq: 0, p_offset_seconds: 0.4 })).toEqual({ ok: true }); // sent twice: once
+
+    const piece = await claim(id);
+    expect(piece).toMatchObject({ storage_path: pathOf(id, "patient", 0), language: "sk", speaker: "patient" });
+    expect((await engine.client.storage.from("audio").download(piece!.storage_path)).error).toBeNull();
+    expect(await rpc(engine.client, "engine_live_piece_done", { p_id: piece!.id, p_text: "Budím sa o tretej." })).toEqual({ ok: true });
+    expect((await engine.client.storage.from("audio").remove([piece!.storage_path])).error).toBeNull();
+
+    const { data } = await eva.client.from("live_pieces").select("speaker, seq, offset_seconds, text, status").eq("consultation_id", id);
+    expect(data).toEqual([{ speaker: "patient", seq: 0, offset_seconds: 0.4, text: "Budím sa o tretej.", status: "done" }]);
+  });
+
+  it("is refused without consent, for another doctor's consultation, and from anyone but the doctor", async () => {
+    const pending = await consultation(false);
+    expect((await send(pending, "practitioner", 0, 0)).added).toMatchObject({ ok: false });
+    const id = await consultation();
+    const other = await newPractitioner(stack, "live-other");
+    expect(await rpc(other.client, "add_live_piece", { p_consultation_id: id, p_speaker: "practitioner", p_seq: 0, p_offset_seconds: 0 })).toEqual({ ok: false, error_category: "NOT_FOUND" });
+    expect((await other.client.storage.from("audio").upload(pathOf(id, "practitioner", 0), OGG, { contentType: "audio/ogg" })).error).not.toBeNull();
+    expect((await engine.client.storage.from("audio").download(pathOf(id, "practitioner", 0))).error).not.toBeNull(); // not claimed
+  });
+
+  it("comes before any other work, and wakes the cloud engine", async () => {
+    const id = await consultation();
+    await send(id, "practitioner", 3, 30);
+    expect(sqlAsOwner("select private.engine_work_waiting();")).toBe("t");
+    const piece = await claim(id);
+    expect(piece).toMatchObject({ storage_path: pathOf(id, "practitioner", 3) });
+    await rpc(engine.client, "engine_live_piece_done", { p_id: piece!.id, p_text: "" });
+  });
+
+  it("of a call that has ended is not read: the full transcript is on its way", async () => {
+    const id = await consultation();
+    await send(id, "patient", 9, 90);
+    sqlAsOwner(`update public.consultations set status = 'audio_imported' where id = '${id}';`);
+    expect(await claim(id)).toBeNull();
+    expect(sqlAsOwner(`select status from public.live_pieces where consultation_id = '${id}';`)).toBe("failed");
+  });
+
+  it("left over from more than ten minutes ago is not read", async () => {
+    const id = await consultation();
+    await send(id, "patient", 7, 70);
+    sqlAsOwner(`update public.live_pieces set created_at = now() - interval '11 minutes' where consultation_id = '${id}';`);
+    expect(await claim(id)).toBeNull();
+    expect(sqlAsOwner(`select status from public.live_pieces where consultation_id = '${id}';`)).toBe("failed");
+  });
+});

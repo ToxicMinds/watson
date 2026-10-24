@@ -61,6 +61,16 @@ class Connection:
                 self.client = self._sign_in()
         raise AssertionError("unreachable")
 
+    def remove(self, path: str, bucket: str = "audio") -> None:
+        for attempt in (1, 2):
+            try:
+                self.client.storage.from_(bucket).remove([path])
+                return
+            except Exception as exc:
+                if attempt == 2 or not _session_lapsed(exc):
+                    raise
+                self.client = self._sign_in()
+
     def download(self, path: str, bucket: str = "audio") -> bytes:
         for attempt in (1, 2):
             try:
@@ -200,6 +210,13 @@ class Engine:
 
     def run_once(self) -> bool:
         """Claims and processes one job. False when there was nothing to do."""
+        # A piece of the call in progress first: the practitioner is watching for its text.
+        answer = self.main.rpc("engine_claim_live_piece", {})
+        if not answer.get("ok"):
+            raise RuntimeError(str(answer.get("error_category")))
+        if answer.get("piece"):
+            self.process_live_piece(answer["piece"])
+            return True
         answer = self.main.rpc("engine_claim_job", {})
         if not answer.get("ok"):
             raise RuntimeError(str(answer.get("error_category")))
@@ -221,6 +238,27 @@ class Engine:
             self.process_form(answer["job"])
             return True
         return False
+
+    def process_live_piece(self, piece: dict[str, Any]) -> None:
+        """Ten seconds of one voice during the call: its text for the call screen (owner, 24 Oct).
+        The piece is removed either way; the transcript after the call uses the full recordings."""
+        try:
+            data = self.main.download(piece["storage_path"])
+            self.settings.work_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+            with tempfile.TemporaryDirectory(dir=self.settings.work_dir) as folder:
+                path = Path(folder) / "piece"
+                path.write_bytes(data)
+                heard = transcribe_track(path, piece["language"], self.settings, lambda: False)
+            text = " ".join(s.text for s in heard.segments if not s.possibly_not_speech)
+            self.main.rpc("engine_live_piece_done", {"p_id": piece["id"], "p_text": text})
+        except Exception as exc:
+            log_event("live_piece.failed", exception_type=type(exc).__name__)
+            self.main.rpc("engine_live_piece_failed", {"p_id": piece["id"]})
+        finally:
+            try:
+                self.main.remove(piece["storage_path"])
+            except Exception as exc:
+                log_event("live_piece.not_removed", exception_type=type(exc).__name__)
 
     def process_document(self, document: dict[str, Any]) -> None:
         ids: dict[str, str | int] = {
