@@ -85,3 +85,21 @@ describe("a live piece", () => {
     expect(sqlAsOwner(`select status from public.live_pieces where consultation_id = '${id}';`)).toBe("failed");
   });
 });
+
+describe("a live piece set aside", () => {
+  it("is handed to the engine to remove its file, so no audio is left behind", async () => {
+    const id = await consultation();
+    await send(id, "practitioner", 11, 110);
+    sqlAsOwner(`update public.consultations set status = 'audio_imported' where id = '${id}';`);
+    let removed: string[] = [];
+    for (let i = 0; i < 50; i++) {
+      const answer = await rpc(engine.client, "engine_claim_live_piece");
+      removed = removed.concat((answer.remove as string[]) ?? []);
+      if (!answer.piece) break;
+      await rpc(engine.client, "engine_live_piece_done", { p_id: (answer.piece as { id: string }).id, p_text: "" });
+    }
+    expect(removed).toContain(pathOf(id, "practitioner", 11));
+    expect((await engine.client.storage.from("audio").remove([pathOf(id, "practitioner", 11)])).error).toBeNull();
+    expect(sqlAsOwner(`select count(*) from storage.objects where name = '${pathOf(id, "practitioner", 11)}';`)).toBe("0");
+  });
+});

@@ -17,7 +17,7 @@ import { call, explain, isId } from "@/lib/api";
 import { clock, humanSize } from "@/lib/audio";
 import type { Tables } from "@/lib/database.types";
 import { RequireSession } from "@/lib/session";
-import { dateTime, dayMonth, LANGUAGE_LABEL, summarise } from "@/lib/status";
+import { dateTime, dayMonth, LANGUAGE_LABEL, summarise, WITHDRAWABLE } from "@/lib/status";
 import { supabase } from "@/lib/supabase";
 
 type Consultation = Tables<"consultations">;
@@ -139,7 +139,7 @@ function ConsultationView({ userId }: { userId: string }) {
     await deleteAudio();
   });
 
-  const canWithdraw = consultation.consent_recorded_at !== null && status !== "consent_withdrawn";
+  const canWithdraw = consultation.consent_recorded_at !== null && WITHDRAWABLE.includes(status);
 
   return (
     <>
@@ -153,6 +153,9 @@ function ConsultationView({ userId }: { userId: string }) {
             {consultation.fee_cents !== null && ` · Fee ${euros(consultation.fee_cents)}`}
             {consultation.scenario_notes && ` · ${consultation.scenario_notes}`}
           </p>
+          {(status === "approved" || status === "corrected") && (
+            <p className="wa-hint">The form is approved, so consent can no longer be withdrawn here.</p>
+          )}
         </div>
         {canWithdraw && !confirming && (
           <button type="button" className="wa-button wa-button--danger wa-button--small" onClick={() => setConfirming(true)}>

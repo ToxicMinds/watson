@@ -4,6 +4,17 @@ export type ConsultationStatus = Database["public"]["Enums"]["consultation_statu
 export type ConsultationLanguage = Database["public"]["Enums"]["consultation_language"];
 
 /** The four things that must happen to a consultation, in order. */
+/**
+ * Where consent can still be withdrawn: until the form is approved (spec, section 15; the database
+ * function withdraw_consent holds the same list). After approval, what must be kept is a question
+ * for the real-patient gate.
+ */
+export const WITHDRAWABLE: readonly ConsultationStatus[] = [
+  "consent_pending", "ready_for_audio", "audio_imported", "transcription_processing", "transcription_failed",
+  "transcript_ready", "transcript_under_review", "transcript_reviewed", "extraction_processing",
+  "extraction_failed", "draft_ready", "under_review",
+];
+
 export const STAGES = ["Consent", "Call", "Transcript", "Form"] as const;
 type StageState = "done" | "current" | "attention" | "failed" | "pending";
 type Stages = readonly [StageState, StageState, StageState, StageState];

@@ -565,3 +565,24 @@ def test_a_live_piece_comes_before_a_queued_transcript(
     assert piece == [{"status": "done", "text": ""}]  # silence: nothing to show
     job = _data(cara[2].table("transcription_jobs").select("status").eq("consultation_id", queued))
     assert job == [{"status": "queued"}]
+
+
+def test_a_live_piece_of_an_ended_call_is_removed_unread(
+    engine: Engine, cara: tuple[str, str, Client]
+) -> None:
+    _no_live_pieces()
+    consultation_id, path = _live_piece(cara, SPEECH)
+    subprocess.run(
+        ["docker", "exec", "-i", "supabase_db_watson", "psql", "-U", "postgres", "-q"]
+        + ["-v", f"id={consultation_id}"],
+        input="update public.consultations set status = 'audio_imported' where id = :'id';",
+        text=True,
+        check=True,
+    )
+    engine.run_once()
+    piece = _data(
+        cara[2].table("live_pieces").select("status, text").eq("consultation_id", consultation_id)
+    )
+    assert piece == [{"status": "failed", "text": None}]
+    with pytest.raises(StorageException):  # its file is gone too
+        _admin().storage.from_("audio").download(path)
