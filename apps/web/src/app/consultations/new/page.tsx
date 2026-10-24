@@ -12,6 +12,7 @@ import { FieldError, Notice } from "@/components/status";
 import { call, explain } from "@/lib/api";
 import { asClock, asDayMonthYear, fromDayAndClock } from "@/lib/dates";
 import { feeSchema, fromCents, toCents } from "@/lib/fee";
+import { PAYMENTS } from "@/lib/features";
 import { RequireSession } from "@/lib/session";
 import { LANGUAGE_LABEL } from "@/lib/status";
 import { supabase } from "@/lib/supabase";
@@ -61,7 +62,7 @@ function NewConsultation() {
     // Patients seen before, suggested as the name is typed. Row-level security keeps them the practitioner's own.
     supabase.from("patients").select("name, phone, email").order("name").then(({ data }) => setKnown(data ?? []));
     // The usual fee, set in Practice, unless the practitioner has typed one already.
-    supabase.from("practitioner_profiles").select("fee_cents").maybeSingle().then(({ data }) => {
+    if (PAYMENTS) supabase.from("practitioner_profiles").select("fee_cents").maybeSingle().then(({ data }) => {
       if (data?.fee_cents && !getValues("fee")) setValue("fee", fromCents(data.fee_cents));
     });
   }, [getValues, setValue]);
@@ -156,7 +157,7 @@ function NewConsultation() {
               English unless you choose another. The transcript is made in this language; &ldquo;Mixed or unsure&rdquo; lets Watson guess, which is less reliable.
             </p>
 
-            <div className="wa-field">
+            {PAYMENTS && <div className="wa-field">
               <label className="wa-label" htmlFor="fee">Fee</label>
               <p className="wa-hint" id="fee-hint">The patient pays this when they open your link, before the call. It starts at your usual fee, set in Practice; 0 makes the consultation free, with no payment.</p>
               <div className="wa-affixed" style={{ maxWidth: 200 }}>
@@ -165,7 +166,7 @@ function NewConsultation() {
                   aria-invalid={Boolean(errors.fee)} aria-describedby="fee-hint fee-error" {...register("fee")} />
               </div>
               <FieldError id="fee-error" message={errors.fee?.message} />
-            </div>
+            </div>}
 
             <div className="wa-field">
               <label className="wa-label" htmlFor="notes">Notes</label>

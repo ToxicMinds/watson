@@ -18,6 +18,11 @@ const key = (secret: string) =>
   crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
 
 /** A signed note of who started connecting and where to send them back, good for ten minutes. */
+/** Where Google sends the practitioner back: the project's public address. On one computer the
+ * server knows itself as http://kong:8000, so scripts/local.sh gives it WATSON_PUBLIC_URL. */
+export const redirectFor = (env: Record<string, string | undefined>) =>
+  `${env.WATSON_PUBLIC_URL || env.SUPABASE_URL}/functions/v1/google`;
+
 export async function signState(state: State, secret: string, now = Date.now()): Promise<string> {
   const body = base64url(JSON.stringify({ ...state, until: now + STATE_LIFETIME_MS }));
   const signature = new Uint8Array(await crypto.subtle.sign("HMAC", await key(secret), encoder.encode(body)));

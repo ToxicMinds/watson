@@ -6,6 +6,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { BookingSettings } from "@/components/booking-settings";
 import { GoogleConnect, GoogleLine, GooglePanel } from "@/components/google-calendar";
+import { GOOGLE_CALENDAR } from "@/lib/features";
 import { Notice } from "@/components/status";
 import { DayAgenda, WeekGrid, WeekKeys } from "@/components/week-grid";
 import { mondayOf, type Week } from "@/lib/booking";
@@ -71,14 +72,14 @@ function Calendar() {
         </div>
       </div>
       {back && <Notice tone={back.tone} title={back.title}>{back.text}</Notice>}
-      {week.google ? <GoogleLine link={week.google} onChecked={load} /> : <GoogleConnect />}
+      {week.google ? <GoogleLine link={week.google} onChecked={load} /> : GOOGLE_CALENDAR && <GoogleConnect />}
       {!week.page && (
         <Notice title="Patients cannot book you yet">Choose the hours patients can book and fill in your page below, then save.</Notice>
       )}
       <WeekGrid {...parts} />
       <DayAgenda {...parts} />
       <WeekKeys />
-      <BookingSettings page={week.page} quietSave={!week.google} onSaved={load}
+      <BookingSettings page={week.page} quietSave={GOOGLE_CALENDAR && !week.google} onSaved={load}
         aside={week.google ? <GooglePanel onDisconnected={load} /> : undefined} />
     </>
   );

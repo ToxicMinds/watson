@@ -6,11 +6,11 @@
 // POST from the web app, as the signed-in practitioner: {action: "connect" | "refresh" | "disconnect"}.
 // POST from the database's schedule, with the x-watson-cron secret: reads every connected calendar.
 // GET: Google sends the practitioner back here from its consent screen.
-import { authUrl, busyTimes, eventFor, readState, SCOPES, signState } from "../_shared/google.ts";
+import { authUrl, busyTimes, eventFor, readState, redirectFor, SCOPES, signState } from "../_shared/google.ts";
 import { admin, env, reply, sameSecret, SITE, SITES } from "../_shared/server.ts";
 
 const CALENDAR_API = "https://www.googleapis.com/calendar/v3";
-const REDIRECT = `${env("SUPABASE_URL")}/functions/v1/google`;
+const REDIRECT = redirectFor({ SUPABASE_URL: env("SUPABASE_URL"), WATSON_PUBLIC_URL: env("WATSON_PUBLIC_URL") });
 const LOOKAHEAD_MS = 35 * 86_400_000; // as far ahead as patients can see times
 const configured = () => Boolean(env("GOOGLE_CLIENT_ID") && env("GOOGLE_CLIENT_SECRET"));
 

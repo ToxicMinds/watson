@@ -8,6 +8,7 @@ import { FieldError, Notice } from "@/components/status";
 import { call, explain } from "@/lib/api";
 import { HOUR_CHOICES, WEEKDAYS, type Hours, type OwnPage } from "@/lib/booking";
 import { FEE_RULE, feeSchema, fromCents, toCents } from "@/lib/fee";
+import { PAYMENTS } from "@/lib/features";
 import { LANGUAGE_LABEL, type ConsultationLanguage } from "@/lib/status";
 
 // The hours patients can book and the page they see (design system: ScreenCalendar).
@@ -112,7 +113,7 @@ export function BookingSettings({ page, aside, quietSave, onSaved }: {
                 </select>
               </div>
             </div>
-            <div className="wa-field">
+            {PAYMENTS && <div className="wa-field">
               <label className="wa-label" htmlFor="fee">Usual fee</label>
               <div className="wa-affixed">
                 <span className="wa-affix" aria-hidden>€</span>
@@ -120,9 +121,9 @@ export function BookingSettings({ page, aside, quietSave, onSaved }: {
                   aria-invalid={Boolean(error("fee_cents"))} aria-describedby="fee-error" onChange={(e) => setFee(e.target.value)} />
               </div>
               <FieldError id="fee-error" message={error("fee_cents")} />
-            </div>
+            </div>}
           </div>
-          <p className="wa-hint">Patients who book on your page pay your usual fee. Each consultation you create starts with it, and you can change it there. 0 or empty is free.</p>
+          {PAYMENTS && <p className="wa-hint">Patients who book on your page pay your usual fee. Each consultation you create starts with it, and you can change it there. 0 or empty is free.</p>}
         </section>
 
         <div style={{ display: "grid", gap: 24, alignContent: "start" }}>

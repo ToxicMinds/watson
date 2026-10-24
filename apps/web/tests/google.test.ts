@@ -2,7 +2,7 @@
 // carries the practitioner through Google's consent screen, the consent address, how busy times
 // are read from Google's answer, and the event a booking becomes in the practitioner's calendar.
 import { describe, expect, it } from "vitest";
-import { authUrl, busyTimes, eventFor, readState, signState, SCOPES } from "../../../supabase/functions/_shared/google";
+import { authUrl, busyTimes, eventFor, readState, redirectFor, signState, SCOPES } from "../../../supabase/functions/_shared/google";
 
 const SECRET = "test-secret";
 
@@ -62,5 +62,13 @@ describe("a booking in the practitioner's Google Calendar", () => {
       start: { dateTime: "2026-10-26T08:00:00.000Z" },
       end: { dateTime: "2026-10-26T08:45:00.000Z" },
     });
+  });
+});
+
+describe("the address Google sends the practitioner back to", () => {
+  it("is the project's public address, also on one computer, where the server knows itself by an inner name", () => {
+    expect(redirectFor({ SUPABASE_URL: "https://ref.supabase.co" })).toBe("https://ref.supabase.co/functions/v1/google");
+    expect(redirectFor({ SUPABASE_URL: "http://kong:8000", WATSON_PUBLIC_URL: "http://127.0.0.1:54321" }))
+      .toBe("http://127.0.0.1:54321/functions/v1/google");
   });
 });

@@ -19,3 +19,6 @@ vault/
 
 # synthetic fixtures are the one exception
 !packages/test-fixtures/audio/*.wav
+
+# Watson on one computer (scripts/local.sh): its logins, engine settings and logs
+.local/
