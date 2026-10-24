@@ -1,20 +1,36 @@
 "use client";
 
 import { Check, MessageCircle } from "lucide-react";
+import { useState } from "react";
 import { CopyButton } from "@/components/copy-button";
+import { Notice } from "@/components/status";
+import { call, explain } from "@/lib/api";
 import { patientLink } from "@/lib/call";
 import type { Tables } from "@/lib/database.types";
 import { euros } from "@/lib/fee";
 import { dateTime } from "@/lib/status";
 import { patientMessage, whatsappLink } from "@/lib/whatsapp";
 
-/** The patient's link, a way to send it on WhatsApp, and whether they have paid. */
-export function PatientPanel({ consultation, patient }: {
+/** The patient's link, a way to send it on WhatsApp, and whether they have paid (or that it is free). */
+export function PatientPanel({ consultation, patient, onChanged }: {
   consultation: Tables<"consultations">;
   patient: { name: string; phone: string | null } | null;
+  onChanged: () => void;
 }) {
   const link = patientLink(consultation.short_code);
   const fee = consultation.fee_cents;
+  const [freeing, setFreeing] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  // Owner, 24 Oct: a "Make it free" button for consultations not paid yet.
+  async function makeFree() {
+    setFreeing(true);
+    setProblem(null);
+    const outcome = await call("make_consultation_free", { p_consultation_id: consultation.id });
+    setFreeing(false);
+    if (!outcome.ok) return setProblem(explain(outcome.error_category));
+    onChanged();
+  }
 
   return (
     <section className="wa-panel" aria-labelledby="patient-title">
@@ -24,9 +40,14 @@ export function PatientPanel({ consultation, patient }: {
           <span className="wa-chip wa-chip--done"><Check aria-hidden className="wa-icon wa-icon--sm" />
             Paid {euros(consultation.paid_amount_cents ?? fee)} · {dateTime(consultation.paid_at)}</span>
         ) : (
-          <span className="wa-chip wa-chip--attention">Not paid yet</span>
+          <div className="wa-actions">
+            <span className="wa-chip wa-chip--attention">Not paid yet</span>
+            <button type="button" className="wa-button wa-button--quiet wa-button--small" disabled={freeing}
+              aria-busy={freeing || undefined} onClick={makeFree}>Make it free</button>
+          </div>
         ))}
       </div>
+      {problem && <Notice tone="failed" title="The consultation was not made free">{problem}</Notice>}
       <div className="wa-field">
         <label className="wa-label" htmlFor="patient-link">Link for the patient</label>
         <div className="wa-invite">
