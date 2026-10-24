@@ -20,10 +20,30 @@ type Row = {
   language: keyof typeof LANGUAGE_LABEL; status: ConsultationStatus;
   fee_cents: number | null; paid_at: string | null;
   forms: { form_answers: { machine_text: string | null }[] }[];
-  patients: { name: string } | null;
+  patients: { name: string; phone: string | null; email: string | null } | null;
 };
 /** The patient's name once known, else the consultation's reference. */
 const who = (row: Row) => row.patients?.name ?? row.synthetic_patient_ref;
+
+// Finding and ordering patients (owner, 24 Oct: "the ability to search ... sorted by patient last name").
+type Sort = "name" | "date";
+const plain = (text: string) => text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+/** A row matches by the patient's name, email or phone, or by the consultation's number; accents optional. */
+function matches(row: Row, query: string): boolean {
+  const wanted = plain(query.trim());
+  if (!wanted) return true;
+  const digits = wanted.replace(/\D/g, "");
+  return [row.patients?.name, row.patients?.email, row.synthetic_patient_ref].some((text) => text && plain(text).includes(wanted))
+    || (digits.length >= 3 && (row.patients?.phone ?? "").replace(/\D/g, "").includes(digits));
+}
+const collator = new Intl.Collator("sk", { sensitivity: "base" });
+const lastName = (name: string) => name.trim().split(/\s+/).at(-1) ?? "";
+const newestFirst = (a: Row, b: Row) => Date.parse(b.scheduled_at) - Date.parse(a.scheduled_at);
+/** By last name, then first name; consultations without a named patient last, newest first. */
+function byLastName(a: Row, b: Row): number {
+  if (!a.patients || !b.patients) return a.patients ? -1 : b.patients ? 1 : newestFirst(a, b);
+  return collator.compare(lastName(a.patients.name), lastName(b.patients.name)) || collator.compare(a.patients.name, b.patients.name);
+}
 
 export default function ConsultationsPage() {
   return <RequireSession>{(user) => <AppShell user={user}><Dashboard /></AppShell>}</RequireSession>;
@@ -53,12 +73,14 @@ function Dashboard() {
   const [failed, setFailed] = useState(false);
   const [openToday, setOpenToday] = useState<number | null>(null);
   const [filter, setFilter] = useState<Filter | null>(null);
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<Sort>("name");
 
   useEffect(() => {
     // Row-level security returns only the signed-in practitioner's consultations.
     supabase
       .from("consultations")
-      .select("id, synthetic_patient_ref, scheduled_at, updated_at, language, status, fee_cents, paid_at, forms(form_answers(machine_text)), patients(name)")
+      .select("id, synthetic_patient_ref, scheduled_at, updated_at, language, status, fee_cents, paid_at, forms(form_answers(machine_text)), patients(name, phone, email)")
       .filter("released", "eq", false) // an unpaid booking whose hold ran out is not the practitioner's business
       .order("scheduled_at", { ascending: false })
       .then(({ data, error }) => (error ? setFailed(true) : setRows(data as unknown as Row[])));
@@ -73,7 +95,8 @@ function Dashboard() {
   const now = new Date();
   const count = (key: Filter) => rows?.filter((row) => FILTER[key](row, now)).length ?? 0;
   // The numbers count every consultation; the shelves show what the pressed number picks.
-  const shown = rows?.filter((row) => !filter || FILTER[filter](row, now)) ?? [];
+  const shown = (rows ?? []).filter((row) => (!filter || FILTER[filter](row, now)) && matches(row, search))
+    .sort(sort === "name" ? byLastName : newestFirst);
   const group = (name: string) => shown.filter((row) => summarise(row.status).group === name);
   const needYou = group("Needs you");
   const working = group("Watson is working");
@@ -141,10 +164,29 @@ function Dashboard() {
         </div>
       ) : (
         <>
-          {shown.length === 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
+            <div className="wa-field" style={{ flex: "1 1 260px" }}>
+              <label className="wa-label" htmlFor="find">Find a patient</label>
+              <input id="find" type="search" className="wa-input" placeholder="Name, phone, email or number" autoComplete="off"
+                value={search} onChange={(event) => setSearch(event.target.value)} />
+            </div>
+            <div className="wa-field" style={{ flex: "0 1 230px" }}>
+              <label className="wa-label" htmlFor="sort">Sort</label>
+              <div className="wa-select">
+                <select id="sort" value={sort} onChange={(event) => setSort(event.target.value as Sort)}>
+                  <option value="name">Patient&apos;s last name</option>
+                  <option value="date">Date, newest first</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          {shown.length === 0 && (search.trim() ? (
+            <Notice title="No patient found" actions={<button type="button" className="wa-button wa-button--secondary wa-button--small"
+              onClick={() => setSearch("")}>Clear the search</button>}>Nobody matches &ldquo;{search.trim()}&rdquo;. Check the spelling, or try their phone or email.</Notice>
+          ) : (
             <Notice title="Nothing here" actions={<button type="button" className="wa-button wa-button--secondary wa-button--small"
               onClick={() => setFilter(null)}>Show all consultations</button>}>No consultation matches this number right now.</Notice>
-          )}
+          ))}
           {needYou.length > 0 && (
             <section className="wa-shelf" aria-labelledby="needs">
               <div className="wa-shelf__head"><h2 className="wa-heading" id="needs">Needs you</h2></div>
@@ -203,10 +245,11 @@ function Case({ row }: { row: Row }) {
   return (
     <Link href={formReady ? `/form/?id=${row.id}` : `/consultation/?id=${row.id}`} className={`wa-case ${edge}`}>
       <div className="wa-case__top">
-        <span className={row.patients ? "wa-case__name" : "wa-case__ref"}>{who(row)}</span>
+        <span className={row.patients ? "wa-case__name" : "wa-case__ref"}>{row.patients?.name ?? "Patient not named yet"}</span>
         <StatusChip status={row.status} />
       </div>
-      <p className="wa-case__meta">{[dateTime(row.scheduled_at), LANGUAGE_LABEL[row.language], fee].filter(Boolean).join(" · ")}</p>
+      <p className="wa-case__meta">{[dateTime(row.scheduled_at), LANGUAGE_LABEL[row.language], fee,
+        row.patients ? row.patients.phone ?? row.patients.email : row.synthetic_patient_ref].filter(Boolean).join(" · ")}</p>
       <div className="wa-dots" aria-hidden>
         {stages.map((state, index) => <span key={index} className={state === "pending" ? undefined : `is-${state}`} />)}
       </div>

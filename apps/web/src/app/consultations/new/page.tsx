@@ -13,6 +13,7 @@ import { call, explain } from "@/lib/api";
 import { feeSchema, toCents } from "@/lib/fee";
 import { RequireSession } from "@/lib/session";
 import { LANGUAGE_LABEL } from "@/lib/status";
+import { supabase } from "@/lib/supabase";
 
 const schema = z.object({
   scheduled_at: z.string().min(1, "Choose the date and time of the consultation."),
@@ -20,6 +21,14 @@ const schema = z.object({
   consent_recorded: z.boolean(),
   scenario_notes: z.string().max(500, "Keep the notes under 500 characters."),
   fee: feeSchema,
+  // The patient (owner, 24 Oct): name and phone or email together, or neither (the patient gives them).
+  patient_name: z.string().max(120, "Keep the name under 120 characters."),
+  patient_contact: z.string().max(254, "Keep it under 254 characters."),
+}).superRefine((values, context) => {
+  const name = values.patient_name.trim();
+  const contact = values.patient_contact.trim();
+  if (name && !contact) context.addIssue({ code: "custom", path: ["patient_contact"], message: "Add their phone (with its country code, like +421) or their email." });
+  if (contact && !name) context.addIssue({ code: "custom", path: ["patient_name"], message: "Add the patient's name too." });
 });
 type Values = z.infer<typeof schema>;
 
@@ -27,18 +36,28 @@ export default function NewConsultationPage() {
   return <RequireSession>{(user) => <AppShell user={user}><NewConsultation /></AppShell>}</RequireSession>;
 }
 
+type Known = { name: string; phone: string | null; email: string | null };
+
 function NewConsultation() {
   const router = useRouter();
   const [failure, setFailure] = useState<string | null>(null);
+  const [known, setKnown] = useState<Known[]>([]);
   const {
     register,
     handleSubmit,
     setValue,
+    getValues,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { scheduled_at: "", language: "en", consent_recorded: true, scenario_notes: "", fee: "" },
+    defaultValues: { scheduled_at: "", language: "en", consent_recorded: true, scenario_notes: "", fee: "", patient_name: "", patient_contact: "" },
   });
+
+  useEffect(() => {
+    // Patients seen before, suggested as the name is typed. Row-level security keeps them the practitioner's own.
+    supabase.from("patients").select("name, phone, email").order("name").then(({ data }) => setKnown(data ?? []));
+  }, []);
 
   useEffect(() => {
     // Now, in the viewer's own time zone, in the form the date-time field expects.
@@ -55,9 +74,13 @@ function NewConsultation() {
       p_consent_recorded: values.consent_recorded,
       p_scenario_notes: values.scenario_notes,
       p_fee_cents: toCents(values.fee) ?? undefined,
+      p_patient_name: values.patient_name.trim() || undefined,
+      p_patient_contact: values.patient_contact.trim() || undefined,
     });
-    if (outcome.ok) router.push(`/consultation/?id=${outcome.consultation_id}`);
-    else setFailure(explain(outcome.error_category));
+    if (outcome.ok) return router.push(`/consultation/?id=${outcome.consultation_id}`);
+    if (outcome.field === "contact") return setError("patient_contact", { message: "That phone or email cannot be used. A phone needs its country code, like +421 905 123 456." });
+    if (outcome.field === "name") return setError("patient_name", { message: "Write the patient's name, up to 120 characters." });
+    setFailure(explain(outcome.error_category));
   }
 
   return (
@@ -67,6 +90,36 @@ function NewConsultation() {
       <div className="wa-split">
         <form onSubmit={handleSubmit(create)} noValidate className="wa-panel" aria-label="Consultation details">
           <div className="wa-form">
+            <fieldset className="wa-form" style={{ border: 0, margin: 0, padding: 0 }}>
+              <legend className="wa-label" style={{ marginBottom: 4 }}>Patient</legend>
+              <p className="wa-hint" id="patient-hint" style={{ marginTop: -8 }}>
+                Start typing to choose someone you have seen before. Leave both empty to let the patient fill them in from their link.
+              </p>
+              <div className="wa-fields-row">
+                <div className="wa-field">
+                  <label className="wa-label" htmlFor="patient-name">Patient&apos;s name</label>
+                  <input id="patient-name" className="wa-input" list="patients" autoComplete="off"
+                    aria-invalid={Boolean(errors.patient_name)} aria-describedby="patient-hint patient-name-error"
+                    {...register("patient_name", {
+                      onChange: (event) => {
+                        const seen = known.find((patient) => patient.name === event.target.value);
+                        if (seen && !getValues("patient_contact")) setValue("patient_contact", seen.phone ?? seen.email ?? "");
+                      },
+                    })} />
+                  <datalist id="patients">
+                    {known.map((patient) => <option key={`${patient.name}-${patient.phone ?? patient.email}`} value={patient.name}>{patient.phone ?? patient.email}</option>)}
+                  </datalist>
+                  <FieldError id="patient-name-error" message={errors.patient_name?.message} />
+                </div>
+                <div className="wa-field">
+                  <label className="wa-label" htmlFor="patient-contact">Phone or email</label>
+                  <input id="patient-contact" className="wa-input" autoComplete="off" placeholder="+421 905 123 456"
+                    aria-invalid={Boolean(errors.patient_contact)} aria-describedby="patient-contact-error" {...register("patient_contact")} />
+                  <FieldError id="patient-contact-error" message={errors.patient_contact?.message} />
+                </div>
+              </div>
+            </fieldset>
+
             <div className="wa-fields-row">
               <div className="wa-field">
                 <label className="wa-label" htmlFor="when">Date and time</label>
@@ -130,7 +183,7 @@ function NewConsultation() {
         <aside className="wa-aside" aria-labelledby="next-title">
           <h2 className="wa-heading" id="next-title" style={{ color: "var(--ink)" }}>What happens next</h2>
           <ol>
-            <li>Watson numbers the consultation. Add the patient&apos;s name on the next page.</li>
+            <li>Watson numbers the consultation and remembers the patient: next time, start typing their name.</li>
             <li>Send the patient their link. If you set a fee, they pay it there.</li>
             <li>Start the video call. Both voices are recorded.</li>
             <li>When you end the call, Watson writes the transcript and fills in your form.</li>
