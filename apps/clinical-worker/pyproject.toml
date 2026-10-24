@@ -12,8 +12,7 @@ dependencies = [
     "faster-whisper>=1.2.1",
     "pydantic>=2.14.1",
     "supabase>=2.32,<3",
-    # The v0.3.36 macOS ARM wheel is corrupt upstream; build its verified source archive instead.
-    "llama-cpp-python @ https://github.com/abetlen/llama-cpp-python/releases/download/v0.3.36/llama_cpp_python-0.3.36.tar.gz",
+    "llama-cpp-python==0.3.36",  # fills in forms with a local model (decision 0005)
     "pypdfium2>=5.14",  # reads the text of PDFs the patient sends, and renders scanned pages
     "rapidocr>=3.10",  # reads photos and scans, with a Latin model that keeps diacritics
     "pillow>=13.0.0",
@@ -25,6 +24,20 @@ constraint-dependencies = ["certifi>=2026.10.19", "filelock>=4.2.1"]
 
 [project.scripts]
 clinical-worker = "clinical_worker.__main__:main"
+
+# Where llama-cpp-python comes from. Linux (the cloud engine, CI): the prebuilt CPU wheel, so
+# installing never compiles llama.cpp. macOS: the v0.3.36 Apple-silicon wheel is corrupt upstream
+# (found by Prasanth, 24 Oct), so the verified source archive is built there instead.
+[tool.uv.sources]
+llama-cpp-python = [
+  { index = "llama-cpp-cpu", marker = "sys_platform == 'linux'" },
+  { url = "https://github.com/abetlen/llama-cpp-python/releases/download/v0.3.36/llama_cpp_python-0.3.36.tar.gz", marker = "sys_platform == 'darwin'" },
+]
+
+[[tool.uv.index]]
+name = "llama-cpp-cpu"
+url = "https://abetlen.github.io/llama-cpp-python/whl/cpu"
+explicit = true
 
 [build-system]
 requires = ["uv_build>=0.10.12,<0.11.0"]
