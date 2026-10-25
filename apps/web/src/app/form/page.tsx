@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronLeft, FileText, Pencil, RefreshCw, X } from "lucide-react";
+import { Check, ChevronLeft, Download, FileText, Pencil, Printer, RefreshCw, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
@@ -9,14 +9,16 @@ import { Notice } from "@/components/status";
 import { call, explain, isId } from "@/lib/api";
 import { clock } from "@/lib/audio";
 import { openDocument } from "@/lib/documents";
+import { downloadConsultation } from "@/lib/download";
 import type { Tables } from "@/lib/database.types";
+import { loadRecords } from "@/lib/records";
 import { RequireSession } from "@/lib/session";
 import { dateTime } from "@/lib/status";
 import { supabase } from "@/lib/supabase";
 
 type Answer = Tables<"form_answers">;
 type Segment = Pick<Tables<"transcript_segments">, "position" | "speaker" | "start_seconds" | "machine_text" | "reviewed_text">;
-type Field = { key: string; label: string; mode?: "extract" | "suggest" };
+type Field = { key: string; label: string; mode?: "extract" | "suggest" | "manual" };
 type Template = { title: string; sections: { title: string; fields: Field[] }[] };
 type DocumentQuote = { document_id: string; page: number; text: string };
 type Loaded = {
@@ -140,7 +142,10 @@ function FormView() {
   const approved = form.status === "approved";
   const answered = answers.filter((answer) => answer.machine_text !== null).length;
   const toCheck = answers.filter((answer) => answer.machine_text !== null && answer.review === "unreviewed").length;
-  const isEmpty = (answer: Answer) => answer.machine_text === null && answer.review !== "edited";
+  // A field only the practitioner fills in, such as private notes (owner, 24 Oct): never "not discussed".
+  const manual = (answer: Answer) => fields.get(answer.field_key)?.mode === "manual";
+  const asked = answers.filter((answer) => !manual(answer)).length;
+  const isEmpty = (answer: Answer) => !manual(answer) && answer.machine_text === null && answer.review !== "edited";
   const suggested = answers.filter((answer) => fields.get(answer.field_key)?.mode === "suggest" && !isEmpty(answer) && answer.review !== "rejected");
   const checked = answered - toCheck;
   // The answer whose quotes are lit: the one picked, else the first still to check.
@@ -174,6 +179,14 @@ function FormView() {
     setBusy(false);
     setProblem(explain(outcome.error_category));
   }
+  async function downloadExcel() {
+    setBusy(true);
+    setProblem(null);
+    const records = await loadRecords(consultation.id);
+    setBusy(false);
+    if (!records?.length) return setProblem("The form could not be loaded. Check your connection and try again.");
+    downloadConsultation(records[0]);
+  }
   function edit(answer: Answer) {
     setEditing(answer.field_key);
     setDraft(answer.practitioner_text ?? answer.machine_text ?? "");
@@ -184,7 +197,8 @@ function FormView() {
     const label = field?.label ?? answer.field_key;
     const empty = isEmpty(answer);
     const text = answer.review === "edited" ? answer.practitioner_text : answer.machine_text;
-    const [chipClass, chipText] = empty ? ["wa-chip--done", "Not discussed"] : CHIP[answer.review];
+    const own = manual(answer);
+    const [chipClass, chipText] = own ? ["wa-chip--done", "Only for you"] : empty ? ["wa-chip--done", "Not discussed"] : CHIP[answer.review];
     const settled = answer.review !== "unreviewed";
     const modifier = empty ? " wa-answer--empty" : answer.review === "rejected" ? " wa-answer--rejected wa-answer--settled" : settled ? " wa-answer--settled" : "";
     const quotes = answer.evidence.map((position) => segments.get(position)).filter((segment) => segment !== undefined);
@@ -213,7 +227,10 @@ function FormView() {
             </div>
           </form>
         ) : (
-          <p className="wa-answer__text">{empty ? "Not discussed in the conversation." : text}</p>
+          <>
+            {(!own || text) && <p className="wa-answer__text">{empty ? "Not discussed in the conversation." : text}</p>}
+            {own && <p className="wa-hint">Only you see this. Watson does not fill it in, and it is never shared.</p>}
+          </>
         )}
         {field?.mode === "suggest" && !empty && answer.review === "unreviewed" && (
           <p className="wa-hint">Watson&apos;s reading of the conversation, not a diagnosis. Accept it only if it is your assessment.</p>
@@ -246,7 +263,14 @@ function FormView() {
             })}
           </ul>
         )}
-        {!approved && editing !== answer.field_key && (
+        {own && !approved && editing !== answer.field_key && (
+          <div className="wa-actions">
+            <button type="button" className="wa-button wa-button--secondary" disabled={busy} onClick={() => edit(answer)}>
+              <Pencil aria-hidden className="wa-icon wa-icon--sm" />{text ? "Edit" : "Write"}
+            </button>
+          </div>
+        )}
+        {!own && !approved && editing !== answer.field_key && (
           <div className="wa-actions">
             {settled ? (
               <button type="button" className="wa-button wa-button--quiet wa-button--small" disabled={busy}
@@ -277,9 +301,17 @@ function FormView() {
             <h1 className="wa-hero__title" id="form-title">{patientName ?? consultation.synthetic_patient_ref}</h1>
             <p className="wa-hero__meta">
               Filled in by Watson from the call of {dateTime(consultation.scheduled_at)}
-              {documents.size > 0 && ` and ${documents.size === 1 ? "one document" : `${documents.size} documents`}`} · {answered} of {answers.length} answered
-              {answers.length > answered && ` · ${answers.length - answered} not discussed`}
+              {documents.size > 0 && ` and ${documents.size === 1 ? "one document" : `${documents.size} documents`}`} · {answered} of {asked} answered
+              {asked > answered && ` · ${asked - answered} not discussed`}
             </p>
+            <div className="wa-actions" style={{ marginTop: 8 }}>
+              <button type="button" className="wa-button wa-button--secondary" disabled={busy} onClick={() => void downloadExcel()}>
+                <Download aria-hidden className="wa-icon" />Download as Excel
+              </button>
+              <Link href={`/print/?id=${consultation.id}`} className="wa-button wa-button--secondary">
+                <Printer aria-hidden className="wa-icon" />Print or save as PDF
+              </Link>
+            </div>
           </div>
           {!approved && answered > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>

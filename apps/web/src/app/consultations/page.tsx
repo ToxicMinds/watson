@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, Download, Plus, Printer } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
@@ -10,8 +10,10 @@ import { Notice, StatusChip } from "@/components/status";
 import type { ConsultationStatus } from "@/lib/status";
 import { call } from "@/lib/api";
 import { clockTime, viewerZone, type Week } from "@/lib/booking";
+import { downloadAll } from "@/lib/download";
 import { engineStatus, type Engine } from "@/lib/engine";
 import { dateTime, LANGUAGE_LABEL, summarise } from "@/lib/status";
+import { loadRecords } from "@/lib/records";
 import { RequireSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 
@@ -74,6 +76,16 @@ function Dashboard() {
   const [openToday, setOpenToday] = useState<number | null>(null);
   const [filter, setFilter] = useState<Filter | null>(null);
   const [search, setSearch] = useState("");
+  const [exporting, setExporting] = useState<"idle" | "busy" | "failed">("idle");
+
+  // Every patient's consultations at once, to keep (owner, 24 Oct).
+  async function exportAll() {
+    setExporting("busy");
+    const records = await loadRecords();
+    if (!records) return setExporting("failed");
+    downloadAll(records);
+    setExporting("idle");
+  }
   const [sort, setSort] = useState<Sort>("name");
 
   useEffect(() => {
@@ -121,7 +133,7 @@ function Dashboard() {
               <p className="wa-hero__next">
                 {next && <>Next: <Link href={`/consultation/?id=${next.id}`}>{who(next)} {nextWhen(next.scheduled_at, now)}</Link>{next.fee_cents !== null && (next.paid_at ? ", paid" : ", not paid yet")}</>}
                 {next && openToday !== null && " · "}
-                {openToday !== null && <>{openToday === 1 ? "One open time" : `${openToday} open times`} left today · <Link href="/calendar/">Calendar</Link></>}
+                {openToday !== null && <>{openToday === 1 ? "One open time" : `${openToday} open times`} left today · <Link href="/calendar/">Practice</Link></>}
               </p>
             )}
             {engine && <EngineStatus engine={engine} />}
@@ -213,6 +225,20 @@ function Dashboard() {
               </ul>
             </section>
           )}
+          <section className="wa-shelf" aria-labelledby="records">
+            <div className="wa-shelf__head"><h2 className="wa-heading" id="records">Your records</h2></div>
+            <p className="wa-text">Every patient&apos;s consultations and forms, to keep on your computer or to print.</p>
+            <div className="wa-actions">
+              <button type="button" className="wa-button wa-button--secondary" disabled={exporting === "busy"}
+                aria-busy={exporting === "busy" || undefined} onClick={() => void exportAll()}>
+                <Download aria-hidden className="wa-icon" />{exporting === "busy" ? "Preparing…" : "Download all as Excel"}
+              </button>
+              <Link href="/print/?all=1" className="wa-button wa-button--secondary">
+                <Printer aria-hidden className="wa-icon" />Print all or save as PDF
+              </Link>
+            </div>
+            {exporting === "failed" && <p className="wa-error" role="alert">Your records could not be loaded. Check your connection and try again.</p>}
+          </section>
         </>
       )}
     </>

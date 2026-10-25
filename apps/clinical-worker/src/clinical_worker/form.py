@@ -14,7 +14,8 @@ from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
-Mode = Literal["extract", "suggest"]
+# "manual": the practitioner's alone, such as private notes; never asked of the model.
+Mode = Literal["extract", "suggest", "manual"]
 # Small models sometimes answer "none specified" instead of leaving a field empty.
 # A bare "None" stays: the patient may have said so ("no operations").
 EMPTY = re.compile(
@@ -50,6 +51,15 @@ class Template(BaseModel):
     @property
     def fields(self) -> list[TemplateField]:
         return [f for s in self.sections for f in s.fields]
+
+    @property
+    def asked(self) -> list[TemplateSection]:
+        """The sections and fields the model fills in: all but the practitioner's own."""
+        return [
+            TemplateSection(title=s.title, fields=kept)
+            for s in self.sections
+            if (kept := [f for f in s.fields if f.mode != "manual"])
+        ]
 
 
 @dataclass(frozen=True)
@@ -159,7 +169,7 @@ def prompt(
             + (" [SUGGEST]" if f.mode == "suggest" else "")
             for f in section.fields
         )
-        for section in template.sections
+        for section in template.asked
     )
     system = SYSTEM.format(language=LANGUAGE_NAMES.get(language, "the language of the transcript"))
     user = f"Form fields:\n{fields}\n\nTranscript:\n{numbered(lines)}"
@@ -184,7 +194,7 @@ def schema(template: Template, with_documents: bool = False) -> dict[str, Any]:
         "required": list(properties),
         "additionalProperties": False,
     }
-    keys = [f.key for f in template.fields]
+    keys = [f.key for section in template.asked for f in section.fields]
     return {
         "type": "object",
         "properties": dict.fromkeys(keys, entry),
@@ -202,6 +212,9 @@ def parse(
     by_number = {d.number: d for d in documents or []}
     answers = []
     for f in template.fields:
+        if f.mode == "manual":
+            answers.append(Answer(f.key, None, [], []))
+            continue
         item = data.get(f.key) if isinstance(data, dict) else None
         item = item if isinstance(item, dict) else {}
         text = item.get("answer")

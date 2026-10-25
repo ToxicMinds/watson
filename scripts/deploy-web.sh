@@ -6,7 +6,8 @@
 # The site is Watson's own (Render account watson.assists@gmail.com, since 24 Oct 2026), created
 # once through the API (POST /v1/services) as a static site named watson-assists:
 #   repo https://github.com/watson-assists/watson, branch main, auto-deploy off,
-#   build "npx --yes pnpm@11.5.2 install --frozen-lockfile && npx --yes pnpm@11.5.2 --filter web build",
+#   build "npx --yes pnpm@12.15.0 install --frozen-lockfile && npx --yes pnpm@12.15.0 --filter web build"
+#   (pnpm 12.15.0, as package.json's packageManager since Prasanth's upgrade of 24 Oct),
 #   publish apps/web/out, env NODE_VERSION=24.11.1, NEXT_PUBLIC_SUPABASE_URL and
 #   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (the project's publishable key);
 #   headers for /*: Content-Security-Policy: frame-ancestors 'none'; X-Frame-Options: DENY;
