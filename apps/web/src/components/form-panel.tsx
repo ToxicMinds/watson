@@ -82,6 +82,18 @@ export function FormPanel({ consultationId, status, onChanged }: {
     onChanged();
   }
 
+  // No form of their own yet (owner, 24 Oct): Watson's, then fill it in. Their own form, if they set one, stays.
+  async function fillWatsonForm() {
+    setBusy(true);
+    setProblem(null);
+    const chosen = await call("use_watson_form", {});
+    if (!chosen.ok) {
+      setBusy(false);
+      return setProblem(explain(chosen.error_category));
+    }
+    await retry();
+  }
+
   if (seen === null) return <p className="wa-meta" role="status">Loading the form…</p>;
   const { job, form, engine } = seen;
   const title = (form?.template as { title?: string } | null)?.title;
@@ -90,9 +102,9 @@ export function FormPanel({ consultationId, status, onChanged }: {
     return (
       <section className="wa-panel" aria-labelledby="form-title">
         <h2 className="wa-heading" id="form-title">Form</h2>
-        <p className="wa-text">Your form is not set up yet, so Watson has nothing to fill in. The transcript is below.</p>
+        <p className="wa-text">Your form is not set up yet, so Watson has nothing to fill in. Watson can use its own consultation form: it fills it in from this call now, and from every call after.</p>
         <div className="wa-actions">
-          <button type="button" className="wa-button wa-button--secondary" disabled={busy} onClick={retry}>Fill in my form</button>
+          <button type="button" className="wa-button wa-button--primary" disabled={busy} onClick={fillWatsonForm}>Fill in the form</button>
         </div>
         {problem && <p className="wa-error" role="alert">{problem}</p>}
       </section>

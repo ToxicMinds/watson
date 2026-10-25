@@ -1296,6 +1296,7 @@ export type Database = {
         Args: { p_consultation_id: string }
         Returns: Json
       }
+      use_watson_form: { Args: never; Returns: Json }
       verify_audit_chain: {
         Args: { p_consultation_id: string }
         Returns: boolean

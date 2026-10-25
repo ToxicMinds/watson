@@ -472,3 +472,31 @@ def test_the_speech_model_hears_the_ayurvedic_terms_and_the_consultations_own_na
         == "Ayurveda, dosha, Jana Nováková"
     )
     assert hotwords("", []) is None
+
+
+def test_a_field_for_the_practitioner_alone_is_never_asked_of_the_model() -> None:
+    # Owner, 24 Oct: private notes are the practitioner's; Watson never fills them in.
+    from clinical_worker.form import Line, Template, parse, prompt, schema
+
+    template = Template.model_validate(
+        {
+            "title": "T",
+            "sections": [
+                {"title": "Sleep", "fields": [{"key": "sleep", "label": "Sleep"}]},
+                {
+                    "title": "For you only",
+                    "fields": [
+                        {"key": "private_notes", "label": "Private notes", "mode": "manual"}
+                    ],
+                },
+            ],
+        }
+    )
+    lines = [Line(0, "patient", "I wake at three every night.")]
+    system, user = prompt(template, lines, "en")
+    assert "private_notes" not in user and "For you only" not in user
+    assert list(schema(template)["properties"]) == ["sleep"]
+    raw = '{"sleep": {"lines": [0], "answer": "Wakes at 3"}, "private_notes": {"lines": [0], "answer": "x"}}'
+    answers = {a.key: a for a in parse(raw, template, lines)}
+    assert answers["sleep"].text == "Wakes at 3"
+    assert answers["private_notes"].text is None and answers["private_notes"].evidence == []
