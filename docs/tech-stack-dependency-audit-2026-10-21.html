@@ -1,0 +1,1540 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:,">
+  <title>Watson Technology and Dependency Audit — 21 October 2026</title>
+  <script>document.documentElement.classList.add('js');</script>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f7f7f5;
+      --surface: #ffffff;
+      --surface-muted: #f0f1ee;
+      --text: #17201c;
+      --muted: #59645e;
+      --border: #d8ddd9;
+      --accent: #176b4d;
+      --critical: #9d174d;
+      --high: #a43d16;
+      --moderate: #856404;
+      --clear: #176b4d;
+      --review: #315f85;
+      --focus: #1267c4;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #151816;
+        --surface: #1d211e;
+        --surface-muted: #242925;
+        --text: #edf1ee;
+        --muted: #aab4ad;
+        --border: #3a433d;
+        --accent: #70d6aa;
+        --critical: #ff83b4;
+        --high: #ff9a70;
+        --moderate: #e8c66a;
+        --clear: #70d6aa;
+        --review: #91c9f3;
+        --focus: #83bfff;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+    .skip-link { position: fixed; top: 8px; left: 8px; z-index: 20; transform: translateY(-150%); border-radius: 7px; padding: 10px 14px; background: var(--text); color: var(--bg); font-weight: 800; }
+    .skip-link:focus { transform: translateY(0); }
+    .site-header { position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(14px); }
+    .site-header__inner { display: flex; width: min(1500px, calc(100% - 32px)); min-height: 64px; margin: 0 auto; align-items: center; justify-content: space-between; gap: 20px; }
+    .wordmark { color: var(--text); font-size: .95rem; font-weight: 850; letter-spacing: -.02em; text-decoration: none; }
+    .page-nav { display: flex; gap: 6px; padding: 5px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+    .page-nav a { display: inline-flex; min-height: 34px; align-items: center; border-radius: 7px; padding: 6px 11px; color: var(--muted); font-size: .82rem; font-weight: 750; text-decoration: none; }
+    .page-nav a:hover { color: var(--text); background: var(--surface-muted); }
+    .page-nav a[aria-current="page"] { color: var(--surface); background: var(--accent); }
+    .page-nav a:focus-visible, a:focus-visible, button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+    main { width: min(1500px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0 64px; }
+    .js .report-view:not(.is-active) { display: none; }
+    .report-view > header { scroll-margin-top: 90px; }
+    h1, h2 { margin: 0; line-height: 1.2; }
+    h1 { max-width: 900px; font-size: clamp(2rem, 5vw, 3.6rem); letter-spacing: -0.04em; }
+    h2 { margin-top: 42px; font-size: 1.5rem; }
+    p { margin: 8px 0 0; }
+    .eyebrow { margin: 0 0 10px; color: var(--accent); font-size: .78rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+    .subtitle { max-width: 900px; color: var(--muted); }
+    .stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; margin-top: 28px; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--border); }
+    .stat { padding: 18px; background: var(--surface); }
+    .stat strong { display: block; font-size: 1.8rem; line-height: 1; }
+    .stat span { display: block; margin-top: 7px; color: var(--muted); font-size: .8rem; }
+    .notice { margin-top: 22px; padding: 16px 18px; border-left: 4px solid var(--critical); background: var(--surface); }
+    .notice strong { display: block; margin-bottom: 4px; color: var(--critical); }
+    .controls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 16px 0 12px; }
+    label { display: grid; gap: 5px; color: var(--muted); font-size: .78rem; font-weight: 700; }
+    select, input[type="search"] { min-height: 44px; border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; background: var(--surface); color: var(--text); font: inherit; }
+    input[type="search"] { width: min(420px, 80vw); }
+    .check { display: flex; min-height: 44px; align-items: center; gap: 8px; padding: 0 4px; color: var(--text); font-size: .9rem; cursor: pointer; }
+    .check input { width: 18px; height: 18px; accent-color: var(--accent); }
+    select:focus-visible, input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+    .table-wrap { max-height: 72vh; overflow: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+    table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+    caption { padding: 12px 14px; color: var(--muted); text-align: left; }
+    thead { position: sticky; top: 0; z-index: 1; background: var(--surface-muted); }
+    th, td { padding: 11px 13px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    thead th { color: var(--muted); font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; }
+    tbody th { min-width: 210px; font-weight: 700; }
+    tbody tr:nth-child(even) { background: color-mix(in srgb, var(--surface-muted) 45%, transparent); }
+    .version { min-width: 190px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .8rem; }
+    .status { font-weight: 700; }
+    .status--critical { color: var(--critical); }
+    .status--high { color: var(--high); }
+    .status--moderate { color: var(--moderate); }
+    .status--clear { color: var(--clear); font-weight: 600; }
+    .status--review { color: var(--review); }
+    .section-note, .count, .limits { color: var(--muted); font-size: .86rem; }
+    .recommendations { padding-left: 1.4rem; }
+    .recommendations li { margin: .55rem 0; }
+    .verdict-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .verdict { padding: 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+    .verdict h3 { margin: 10px 0 6px; font-size: 1.05rem; }
+    .verdict p { color: var(--muted); font-size: .9rem; }
+    .pill { display: inline-block; border: 1px solid currentColor; border-radius: 999px; padding: 3px 8px; color: var(--accent); font-size: .7rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+    .source-list { columns: 2; padding-left: 1.4rem; }
+    .source-list li { margin: .4rem 0; break-inside: avoid; }
+    a { color: var(--review); text-underline-offset: .15em; }
+    .hidden { display: none; }
+    .arch-summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-top: 26px; }
+    .arch-stat { min-height: 112px; padding: 17px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+    .arch-stat strong { display: block; color: var(--accent); font-size: 1.55rem; line-height: 1; }
+    .arch-stat span { display: block; margin-top: 9px; color: var(--muted); font-size: .82rem; }
+    .scope-banner { margin-top: 22px; padding: 16px 18px; border: 1px solid var(--border); border-left: 4px solid var(--moderate); background: var(--surface); }
+    .scope-banner strong { display: block; margin-bottom: 3px; color: var(--moderate); }
+    .diagram { margin: 16px 0 0; overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+    .diagram svg { display: block; width: 100%; min-width: 900px; height: auto; }
+    .diagram figcaption { padding: 12px 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: .82rem; }
+    .svg-zone { fill: var(--surface-muted); stroke: var(--border); stroke-width: 1.5; }
+    .svg-node { fill: var(--surface); stroke: var(--border); stroke-width: 1.5; }
+    .svg-node--accent { fill: color-mix(in srgb, var(--accent) 9%, var(--surface)); stroke: var(--accent); }
+    .svg-node--external { fill: color-mix(in srgb, var(--review) 8%, var(--surface)); stroke: var(--review); }
+    .svg-line { fill: none; stroke: var(--muted); stroke-width: 1.6; marker-end: url(#arrow); }
+    .svg-line--media { stroke: var(--accent); stroke-width: 3; }
+    .svg-line--dash { stroke-dasharray: 6 5; }
+    .svg-label { fill: var(--text); font: 700 14px Inter, ui-sans-serif, system-ui, sans-serif; }
+    .svg-small { fill: var(--muted); font: 12px Inter, ui-sans-serif, system-ui, sans-serif; }
+    .svg-zone-title { fill: var(--muted); font: 800 12px Inter, ui-sans-serif, system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+    .component-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .component-card { padding: 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+    .component-card h3 { margin: 0 0 7px; font-size: 1rem; }
+    .component-card p { color: var(--muted); font-size: .88rem; }
+    .flow { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 22px; margin-top: 16px; counter-reset: flow; }
+    .flow-step { position: relative; min-height: 130px; padding: 17px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); counter-increment: flow; }
+    .flow-step::before { content: counter(flow, decimal-leading-zero); display: block; margin-bottom: 10px; color: var(--accent); font-size: .75rem; font-weight: 850; letter-spacing: .08em; }
+    .flow-step:not(:last-child)::after { content: "→"; position: absolute; top: 50%; right: -18px; color: var(--muted); font-weight: 900; transform: translateY(-50%); }
+    .flow-step strong { display: block; font-size: .9rem; }
+    .flow-step span { display: block; margin-top: 6px; color: var(--muted); font-size: .78rem; }
+    .lane-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .lane { overflow: hidden; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+    .lane__head { padding: 15px 17px; border-bottom: 1px solid var(--border); background: var(--surface-muted); }
+    .lane__head span { color: var(--accent); font-size: .7rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+    .lane__head h3 { margin: 4px 0 0; font-size: 1.02rem; }
+    .lane ol { margin: 0; padding: 14px 17px 16px 35px; }
+    .lane li { margin: .45rem 0; color: var(--muted); font-size: .84rem; }
+    .boundary-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin: 16px 0 0; overflow: hidden; border: 1px solid var(--border); border-radius: 10px; background: var(--border); }
+    .boundary { padding: 17px; background: var(--surface); }
+    .boundary dt { font-weight: 800; }
+    .boundary dd { margin: 5px 0 0; color: var(--muted); font-size: .86rem; }
+    .risk-callout { margin-top: 16px; padding: 18px; border: 1px solid color-mix(in srgb, var(--high) 45%, var(--border)); border-radius: 10px; background: color-mix(in srgb, var(--high) 5%, var(--surface)); }
+    .risk-callout h3 { margin: 0; color: var(--high); font-size: 1rem; }
+    .risk-callout p { color: var(--muted); font-size: .88rem; }
+    .roadmap-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin-top: 26px; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--border); }
+    .roadmap-stat { padding: 18px; background: var(--surface); }
+    .roadmap-stat strong { display: block; color: var(--accent); font-size: 1.8rem; line-height: 1; }
+    .roadmap-stat span { display: block; margin-top: 8px; color: var(--muted); font-size: .8rem; }
+    .status-key { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .roadmap-status { display: inline-flex; align-items: center; width: fit-content; min-height: 28px; border: 1px solid currentColor; border-radius: 999px; padding: 4px 9px; font-size: .7rem; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+    .roadmap-status--done { color: var(--clear); }
+    .roadmap-status--partial { color: var(--review); }
+    .roadmap-status--pending { color: var(--muted); }
+    .roadmap-status--blocked { color: var(--high); }
+    .roadmap-track { display: grid; gap: 1px; margin-top: 16px; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--border); }
+    .roadmap-phase { display: grid; grid-template-columns: 180px minmax(0, 1fr) 120px; gap: 18px; align-items: start; padding: 18px; background: var(--surface); }
+    .roadmap-phase h3 { margin: 0; font-size: 1rem; }
+    .roadmap-phase p { color: var(--muted); font-size: .86rem; }
+    .slice-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .slice { border: 1px solid var(--border); border-radius: 6px; padding: 3px 7px; color: var(--muted); background: var(--surface-muted); font-size: .72rem; font-weight: 700; }
+    .roadmap-phase > .roadmap-status { justify-self: end; }
+    .roadmap-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .roadmap-panel { padding: 19px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+    .roadmap-panel h3 { margin: 0; font-size: 1.05rem; }
+    .roadmap-panel ul, .roadmap-panel ol { margin: 12px 0 0; padding-left: 1.25rem; }
+    .roadmap-panel li { margin: .55rem 0; color: var(--muted); font-size: .86rem; }
+    .runtime-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .runtime { padding: 17px; border-top: 3px solid var(--border); background: var(--surface); }
+    .runtime strong { display: block; font-size: .92rem; }
+    .runtime span { display: block; margin-top: 6px; color: var(--muted); font-size: .8rem; }
+    .runtime em { display: block; margin-top: 10px; color: var(--moderate); font-size: .73rem; font-style: normal; font-weight: 800; text-transform: uppercase; }
+    .coverage-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .coverage-card { padding: 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); min-width: 0; }
+    .coverage-card__head { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 8px 12px; }
+    .coverage-card h3 { margin: 0; font-size: 1rem; }
+    .coverage-card p { color: var(--muted); font-size: .84rem; }
+    .coverage-counts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; color: var(--muted); font-size: .74rem; font-weight: 750; }
+    .requirement-status { display: inline-flex; width: fit-content; align-items: center; border: 1px solid currentColor; border-radius: 999px; padding: 3px 8px; font-size: .66rem; font-weight: 850; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
+    .requirement-status--covered { color: var(--clear); }
+    .requirement-status--partial { color: var(--review); }
+    .requirement-status--missing { color: var(--muted); }
+    .requirement-status--blocked { color: var(--high); }
+    #requirements-table tbody th { min-width: 82px; width: 82px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .78rem; }
+    #requirements-table td:nth-child(2) { min-width: 255px; font-weight: 650; }
+    #requirements-table td:nth-child(3) { min-width: 120px; }
+    #requirements-table td:last-child { min-width: 360px; color: var(--muted); }
+    .contract-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin-top: 16px; overflow: hidden; border: 1px solid var(--border); border-radius: 10px; background: var(--border); }
+    .contract-item { padding: 17px; background: var(--surface); min-width: 0; }
+    .contract-item strong { display: block; font-size: .88rem; }
+    .contract-item span { display: block; margin-top: 5px; color: var(--muted); font-size: .8rem; }
+    footer { margin-top: 42px; padding-top: 20px; border-top: 1px solid var(--border); }
+    @media (max-width: 900px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .verdict-grid { grid-template-columns: 1fr; }
+      .arch-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .component-grid, .lane-grid { grid-template-columns: 1fr; }
+      .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .flow-step::after { display: none; }
+      .roadmap-summary, .runtime-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .roadmap-phase { grid-template-columns: 145px minmax(0, 1fr) 110px; }
+      .coverage-grid, .contract-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      th, td { min-width: 180px; }
+    }
+    @media (max-width: 780px) {
+      .site-header__inner { width: min(100% - 20px, 1500px); min-height: 74px; align-items: flex-start; flex-direction: column; justify-content: center; gap: 8px; padding: 8px 0; }
+      .page-nav { width: 100%; }
+    }
+    @media (max-width: 520px) {
+      .page-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .page-nav a { flex: none; justify-content: center; min-width: 0; min-height: 38px; padding: 5px 7px; text-align: center; }
+      main { width: min(100% - 20px, 1500px); padding-top: 24px; }
+      .stats { grid-template-columns: 1fr; }
+      .arch-summary, .flow, .boundary-list { grid-template-columns: 1fr; }
+      .roadmap-summary, .roadmap-columns, .runtime-grid { grid-template-columns: 1fr; }
+      .roadmap-phase { grid-template-columns: 1fr; gap: 9px; }
+      .roadmap-phase > .roadmap-status { justify-self: start; }
+      .coverage-grid, .contract-list { grid-template-columns: 1fr; }
+      .controls, label { width: 100%; }
+      select, input[type="search"] { width: 100%; }
+      .source-list { columns: 1; }
+    }
+    @media print {
+      :root { color-scheme: light; }
+      body { background: white; color: black; }
+      main { width: 100%; padding: 0; }
+      .site-header, .skip-link, .controls { display: none; }
+      .js .report-view:not(.is-active) { display: block; }
+      .report-view + .report-view { break-before: page; }
+      .table-wrap { max-height: none; overflow: visible; }
+      thead { position: static; }
+      tr { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#report-content">Skip to report</a>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="wordmark" href="#inventory">Watson · implementation review</a>
+      <nav class="page-nav" aria-label="Report pages">
+        <a href="#inventory" data-page-link="inventory">Inventory</a>
+        <a href="#architecture" data-page-link="architecture">Architecture</a>
+        <a href="#roadmap" data-page-link="roadmap">Roadmap &amp; status</a>
+        <a href="#requirements" data-page-link="requirements">Requirements</a>
+      </nav>
+    </div>
+  </header>
+  <main id="report-content" tabindex="-1">
+    <section class="report-view is-active" id="inventory" data-page="inventory" aria-labelledby="inventory-title">
+    <header>
+      <p class="eyebrow">Security and architecture inventory</p>
+      <h1 id="inventory-title" tabindex="-1">Watson technology and dependency audit</h1>
+      <p class="subtitle">Current repository HEAD <code>bd9b54d</code> · reviewed 21 October 2026 · direct dependencies catalogued and every lockfile entry scanned.</p>
+    </header>
+
+    <section class="stats" aria-label="Audit summary">
+      <div class="stat"><strong>786</strong><span>Lockfile package records checked</span></div>
+      <div class="stat"><strong>28</strong><span>Distinct advisory groups</span></div>
+      <div class="stat"><strong>7</strong><span>Affected components</span></div>
+      <div class="stat"><strong>0</strong><span>Gateway npm advisories</span></div>
+      <div class="stat"><strong>6</strong><span>Open application findings</span></div>
+    </section>
+
+    <aside class="notice" aria-labelledby="immediate-action">
+      <strong id="immediate-action">Immediate dependency action</strong>
+      Upgrade pnpm to at least 11.11.0; Modal uv to at least 0.13.4; Pillow to 13.0.0; and certifi to at least 2026.10.19. Pillow processes attacker-controlled patient images, making its native memory-safety advisories production-relevant.
+    </aside>
+
+    <section aria-labelledby="inventory-heading">
+      <h2 id="inventory-heading">Inventory</h2>
+      <div class="controls" aria-label="Inventory filters">
+        <label>Technology area
+          <select id="layer-filter"><option value="all">All inventory</option>
+<option value="tooling">Tooling</option>
+<option value="web">Web app</option>
+<option value="worker">Clinical worker</option>
+<option value="edge">Edge functions</option>
+<option value="gateway">WhatsApp gateway</option>
+<option value="platform">Platforms &amp; APIs</option>
+<option value="models">Models</option></select>
+        </label>
+        <label>Search
+          <input id="search-filter" type="search" placeholder="Package, version, purpose, status…">
+        </label>
+        <label class="check"><input id="affected-filter" type="checkbox"> Show affected only</label>
+      </div>
+      <p id="result-count" class="count" aria-live="polite"></p>
+      <p class="section-note">“Clear” means no advisory returned by OSV/npm for the locked version on this date; it does not prove absence of vulnerabilities. Clean transitive packages are represented by lockfile totals rather than hundreds of low-value rows.</p>
+      <div class="table-wrap">
+        <table id="inventory-table">
+          <caption>Direct tools, packages, technologies, security-relevant transitives, platforms, and models</caption>
+          <thead><tr><th scope="col">Tool / package / technology</th><th scope="col">Version</th><th scope="col">Why used</th><th scope="col">Vulnerability status</th></tr></thead>
+          <tbody><tr data-layer="tooling" data-risk="review">
+      <th scope="row">Node.js</th>
+      <td class="version">CI 24.11.1; app &gt;=22; gateway node:22-slim</td>
+      <td>JavaScript runtime, web build, scripts, tests, and gateway runtime.</td>
+      <td><span class="status status--review">Review — runtime patch and container digest not pinned/scanned.</span></td>
+    </tr>
+<tr data-layer="tooling" data-risk="high">
+      <th scope="row">pnpm</th>
+      <td class="version">11.5.2</td>
+      <td>Workspace package manager used locally, in CI, and for Render web builds.</td>
+      <td><span class="status status--high">HIGH — 12 advisories; upgrade to &gt;=11.11.0.</span></td>
+    </tr>
+<tr data-layer="tooling" data-risk="review">
+      <th scope="row">npm</th>
+      <td class="version">Gateway lock v3; local 11.20.0; image-bundled version unpinned</td>
+      <td>Runs npm ci for the isolated WhatsApp Docker image.</td>
+      <td><span class="status status--review">Review — local 11.20.0 clear in OSV; production npm version unknown.</span></td>
+    </tr>
+<tr data-layer="tooling" data-risk="clear">
+      <th scope="row">Turborepo</th>
+      <td class="version">2.11.7</td>
+      <td>Coordinates lint, typecheck, and test tasks across workspaces.</td>
+      <td><span class="status status--clear">Clear — no known OSV advisory returned.</span></td>
+    </tr>
+<tr data-layer="tooling" data-risk="review">
+      <th scope="row">Python</th>
+      <td class="version">3.12 (.python-version); allowed &gt;=3.11,&lt;3.14</td>
+      <td>Clinical transcription, OCR, PDF, and form-filling worker runtime.</td>
+      <td><span class="status status--review">Review — runtime patch level not pinned or CVE-scanned.</span></td>
+    </tr>
+<tr data-layer="tooling" data-risk="critical">
+      <th scope="row">uv</th>
+      <td class="version">Modal 0.10.12; local 0.11.19; CI floats via setup-uv@v6</td>
+      <td>Python resolver, installer, environment runner, and Modal image build tool.</td>
+      <td><span class="status status--critical">CRITICAL — 3 advisory groups on 0.10.12; use &gt;=0.13.4.</span></td>
+    </tr>
+<tr data-layer="tooling" data-risk="clear">
+      <th scope="row">uv_build</th>
+      <td class="version">&gt;=0.10.12,&lt;0.11.0</td>
+      <td>Build backend for the clinical-worker Python package.</td>
+      <td><span class="status status--clear">Clear direct — no known OSV advisory returned.</span></td>
+    </tr>
+<tr data-layer="tooling" data-risk="review">
+      <th scope="row">Deno</th>
+      <td class="version">CI 2.5.6; Supabase runtime major 2</td>
+      <td>Lints, typechecks, tests, and runs Supabase Edge Functions.</td>
+      <td><span class="status status--review">Review — runtime advisories and hosted patch level not assessed.</span></td>
+    </tr>
+<tr data-layer="tooling" data-risk="review">
+      <th scope="row">Supabase CLI</th>
+      <td class="version">CI 2.106.0; local 2.121.0</td>
+      <td>Starts local stack, applies migrations, generates types, and deploys secrets/functions.</td>
+      <td><span class="status status--review">Review — no direct OSV hit; CI/local version drift exists.</span></td>
+    </tr>
+<tr data-layer="tooling" data-risk="review">
+      <th scope="row">GitHub Actions</th>
+      <td class="version">checkout@v4, setup-node@v4, setup-uv@v6, setup-deno@v2, setup-cli@v1</td>
+      <td>CI environment and toolchain setup.</td>
+      <td><span class="status status--review">Hardening gap — actions use mutable major tags, not commit SHAs.</span></td>
+    </tr>
+<tr data-layer="tooling" data-risk="review">
+      <th scope="row">Bash / curl / OpenSSL</th>
+      <td class="version">Host-provided; unpinned</td>
+      <td>Deployment, hosted configuration, API calls, and secret generation.</td>
+      <td><span class="status status--review">Review — host versions are not declared or scanned.</span></td>
+    </tr>
+<tr data-layer="tooling" data-risk="review">
+      <th scope="row">OSV-Scanner / Gitleaks</th>
+      <td class="version">2.7.0 / 8.30.1</td>
+      <td>Dependency and secret scanning used by the security review.</td>
+      <td><span class="status status--review">Review tooling — not part of application runtime.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">@fontsource-variable/atkinson-hyperlegible-mono</th>
+      <td class="version">5.3.0</td>
+      <td>Self-hosted accessible monospace font.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">@fontsource-variable/atkinson-hyperlegible-next</th>
+      <td class="version">5.3.0</td>
+      <td>Self-hosted accessible UI/body font.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">@fontsource-variable/eczar</th>
+      <td class="version">5.3.0</td>
+      <td>Self-hosted display/heading font.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">@hookform/resolvers</th>
+      <td class="version">5.9.1</td>
+      <td>Connects Zod schemas to React Hook Form validation.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">@supabase/supabase-js</th>
+      <td class="version">2.117.3</td>
+      <td>Browser auth, RPC/database access, storage uploads, and Realtime signaling.</td>
+      <td><span class="status status--clear">Clear package; application authorization findings remain open.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">lucide-react</th>
+      <td class="version">1.55.0</td>
+      <td>UI icon set.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">Next.js</th>
+      <td class="version">16.4.0</td>
+      <td>App Router framework and static export build.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">React</th>
+      <td class="version">19.3.0</td>
+      <td>Component and client-state UI layer.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">react-dom</th>
+      <td class="version">19.3.0</td>
+      <td>Renders React into the browser DOM.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">react-hook-form</th>
+      <td class="version">7.90.0</td>
+      <td>Sign-in and consultation form state/validation.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">Zod</th>
+      <td class="version">4.6.7</td>
+      <td>Runtime input and form validation through a CSP-safe wrapper.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">@playwright/test</th>
+      <td class="version">1.64.0</td>
+      <td>Chromium end-to-end tests, including synthetic microphone/camera.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">@tailwindcss/turbopack</th>
+      <td class="version">4.3.3</td>
+      <td>Processes Tailwind CSS in the Next/Turbopack build.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">@types/node</th>
+      <td class="version">20.19.43</td>
+      <td>Node API typings for scripts and tests.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">@types/react</th>
+      <td class="version">19.3.0</td>
+      <td>React TypeScript declarations.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">@types/react-dom</th>
+      <td class="version">19.3.0</td>
+      <td>React DOM TypeScript declarations.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">ESLint</th>
+      <td class="version">9.39.5</td>
+      <td>JavaScript/TypeScript linting and project security rules.</td>
+      <td><span class="status status--clear">Clear direct — dependency graph has braces advisory below.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="high">
+      <th scope="row">eslint-config-next</th>
+      <td class="version">16.4.0</td>
+      <td>Next.js Core Web Vitals and TypeScript lint rules.</td>
+      <td><span class="status status--high">HIGH transitive — braces 3.0.3; dev-only lint path.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="high">
+      <th scope="row">serve</th>
+      <td class="version">14.2.6</td>
+      <td>Serves the static export during local Playwright tests.</td>
+      <td><span class="status status--high">HIGH transitive — compression 1.8.1; dev-only test server.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">Tailwind CSS</th>
+      <td class="version">4.3.3</td>
+      <td>CSS utility/build layer imported by globals.css.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">TypeScript</th>
+      <td class="version">5.9.3</td>
+      <td>Static typing and compile-time checks.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="clear">
+      <th scope="row">Vitest</th>
+      <td class="version">5.0.4</td>
+      <td>Unit and Supabase integration test runner.</td>
+      <td><span class="status status--clear">Clear — no known advisory in lockfile scan.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="high">
+      <th scope="row">braces (transitive)</th>
+      <td class="version">3.0.3</td>
+      <td>Pattern expansion under eslint-config-next → fast-glob → micromatch.</td>
+      <td><span class="status status--high">HIGH — stack exhaustion; fixed in &gt;=3.0.4; dev-only.</span></td>
+    </tr>
+<tr data-layer="web" data-risk="high">
+      <th scope="row">compression (transitive)</th>
+      <td class="version">1.8.1</td>
+      <td>HTTP compression under the local serve package.</td>
+      <td><span class="status status--high">HIGH — memory-leak DoS; fixed in &gt;=1.8.2; dev-only.</span></td>
+    </tr>
+<tr data-layer="worker" data-risk="clear">
+      <th scope="row">av</th>
+      <td class="version">18.1.0</td>
+      <td>Decodes and validates uploaded audio containers.</td>
+      <td><span class="status status--clear">Clear — no known advisory in uv lock scan.</span></td>
+    </tr>
+<tr data-layer="worker" data-risk="clear">
+      <th scope="row">faster-whisper</th>
+      <td class="version">1.2.1</td>
+      <td>Local speech-to-text transcription using CTranslate2.</td>
+      <td><span class="status status--clear">Clear direct; worker graph contains vulnerable certifi.</span></td>
+    </tr>
+<tr data-layer="worker" data-risk="clear">
+      <th scope="row">Pydantic</th>
+      <td class="version">2.14.1</td>
+      <td>Settings validation, transcript models, and JSON Schema source of truth.</td>
+      <td><span class="status status--clear">Clear — no known advisory in uv lock scan.</span></td>
+    </tr>
+<tr data-layer="worker" data-risk="clear">
+      <th scope="row">supabase-py</th>
+      <td class="version">2.32.0</td>
+      <td>Worker authentication, job claims, storage reads, and result writes.</td>
+      <td><span class="status status--clear">Clear direct; application authorization findings remain open.</span></td>
+    </tr>
+<tr data-layer="worker" data-risk="moderate">
+      <th scope="row">llama-cpp-python</th>
+      <td class="version">0.3.36</td>
+      <td>Runs the local GGUF model that fills consultation forms.</td>
+      <td><span class="status status--moderate">MODERATE transitive — diskcache 5.6.3; cache not enabled in code.</span></td>
+    </tr>
+<tr data-layer="worker" data-risk="review">
+      <th scope="row">pypdfium2</th>
+      <td class="version">5.14.0</td>
+      <td>Extracts PDF text and renders scanned pages for OCR.</td>
+      <td><span class="status status--review">Clear in OSV; native-parser fuzz/exploit testing not performed.</span></td>
+    </tr>
+<tr data-layer="worker" data-risk="clear">
+      <th scope="row">RapidOCR</th>
+      <td class="version">3.10.0</td>
+      <td>Reads text from photos and scanned PDF pages with Latin OCR models.</td>
+      <td><span class="status status--clear">Clear direct — no known advisory in uv lock scan.</span></td>
+    </tr>
+<tr data-layer="worker" data-risk="critical">
+      <th scope="row">Pillow</th>
+      <td class="version">12.3.0</td>
+      <td>Opens and transforms patient-uploaded JPEG/PNG/WebP images before OCR.</td>
+      <td><span class="status status--critical">CRITICAL — 9 advisories, including heap/OOB issues; fixed in 13.0.0.</span></td>
+    </tr>
+<tr data-layer="worker" data-risk="clear">
+      <th scope="row">mypy</th>
+      <td class="version">2.4.0</td>
+      <td>Strict Python static type checking.</td>
+      <td><span class="status status--clear">Clear — no known advisory in uv lock scan.</span></td>
+    </tr>
+<tr data-layer="worker" data-risk="clear">
+      <th scope="row">pytest</th>
+      <td class="version">9.1.1</td>
+      <td>Python unit and integration tests.</td>
+      <td><span class="status status--clear">Clear — no known advisory in uv lock scan.</span></td>
+    </tr>
+<tr data-layer="worker" data-risk="clear">
+      <th scope="row">Ruff</th>
+      <td class="version">0.17.0</td>
+      <td>Python linting, formatting, and security-rule checks.</td>
+      <td><span class="status status--clear">Clear — no known advisory in uv lock scan.</span></td>
+    </tr>
+<tr data-layer="worker" data-risk="critical">
+      <th scope="row">certifi (transitive)</th>
+      <td class="version">2026.7.22</td>
+      <td>TLS CA bundle used by worker HTTP clients and model/service downloads.</td>
+      <td><span class="status status--critical">CRITICAL — compromised CA chain; fixed in &gt;=2026.10.19.</span></td>
+    </tr>
+<tr data-layer="worker" data-risk="moderate">
+      <th scope="row">diskcache (transitive)</th>
+      <td class="version">5.6.3</td>
+      <td>Optional cache dependency brought by llama-cpp-python.</td>
+      <td><span class="status status--moderate">MODERATE — unsafe pickle deserialization; no fixed release listed.</span></td>
+    </tr>
+<tr data-layer="worker" data-risk="review">
+      <th scope="row">FastAPI</th>
+      <td class="version">0.143.3</td>
+      <td>Modal wake endpoint that authenticates requests and starts worker drain.</td>
+      <td><span class="status status--review">Clear direct; transitive dependencies are not lock-pinned in web_image.</span></td>
+    </tr>
+<tr data-layer="worker" data-risk="review">
+      <th scope="row">Modal Python SDK / CLI</th>
+      <td class="version">1.6.2</td>
+      <td>Builds and deploys the on-demand cloud worker and model volume.</td>
+      <td><span class="status status--review">Clear direct; installed ephemerally with unresolved transitive versions.</span></td>
+    </tr>
+<tr data-layer="edge" data-risk="clear">
+      <th scope="row">@supabase/supabase-js (Deno)</th>
+      <td class="version">2.117.2</td>
+      <td>Service-role access from payment, Google, Stripe, and WhatsApp Edge Functions.</td>
+      <td><span class="status status--clear">Clear — 10 Deno npm pairs queried; no OSV advisory returned.</span></td>
+    </tr>
+<tr data-layer="edge" data-risk="clear">
+      <th scope="row">Stripe SDK (Deno)</th>
+      <td class="version">22.6.2</td>
+      <td>Stripe Checkout sessions, webhook verification, and payment confirmation.</td>
+      <td><span class="status status--clear">Clear — no known OSV advisory returned.</span></td>
+    </tr>
+<tr data-layer="gateway" data-risk="review">
+      <th scope="row">@whiskeysockets/baileys</th>
+      <td class="version">7.0.0-rc14</td>
+      <td>Unofficial WhatsApp Web client for the owner&#x27;s linked number.</td>
+      <td><span class="status status--review">Clear in npm audit; pre-release/unofficial client creates ban and compatibility risk.</span></td>
+    </tr>
+<tr data-layer="gateway" data-risk="clear">
+      <th scope="row">pino</th>
+      <td class="version">9.14.0</td>
+      <td>Baileys-compatible logger, configured silent to avoid message leakage.</td>
+      <td><span class="status status--clear">Clear — gateway npm audit returned zero advisories.</span></td>
+    </tr>
+<tr data-layer="gateway" data-risk="clear">
+      <th scope="row">qrcode</th>
+      <td class="version">1.5.4</td>
+      <td>Generates the WhatsApp device-pairing QR image.</td>
+      <td><span class="status status--clear">Clear — gateway npm audit returned zero advisories.</span></td>
+    </tr>
+<tr data-layer="platform" data-risk="high">
+      <th scope="row">Supabase platform</th>
+      <td class="version">Hosted version not pinned; CLI local config uses PostgreSQL 17</td>
+      <td>Auth, PostgreSQL, Storage, Realtime, Vault, scheduler, and Edge Functions.</td>
+      <td><span class="status status--high">Review — 6 open application findings; hosted drift not verified.</span></td>
+    </tr>
+<tr data-layer="platform" data-risk="review">
+      <th scope="row">PostgreSQL</th>
+      <td class="version">Major 17; exact patch unknown</td>
+      <td>Primary data store, RLS policies, RPCs, audit data, and job queue.</td>
+      <td><span class="status status--review">Review — exact hosted patch/build not available for CVE matching.</span></td>
+    </tr>
+<tr data-layer="platform" data-risk="review">
+      <th scope="row">pg_cron / pg_net / Vault</th>
+      <td class="version">Supabase-managed; versions not pinned</td>
+      <td>Schedules jobs, makes outbound HTTP calls, and stores service secrets.</td>
+      <td><span class="status status--review">Review — extension versions and hosted configuration not inventoried.</span></td>
+    </tr>
+<tr data-layer="platform" data-risk="review">
+      <th scope="row">Docker base image</th>
+      <td class="version">node:22-slim (rolling tag)</td>
+      <td>Packages and runs the WhatsApp gateway on Render.</td>
+      <td><span class="status status--review">Review — no digest pin; Docker/image scanner unavailable in this audit.</span></td>
+    </tr>
+<tr data-layer="platform" data-risk="review">
+      <th scope="row">Render</th>
+      <td class="version">SaaS/CLI version unpinned</td>
+      <td>Hosts the static web export and WhatsApp Docker gateway.</td>
+      <td><span class="status status--review">Review — deployment/runtime configuration not live-verified.</span></td>
+    </tr>
+<tr data-layer="platform" data-risk="high">
+      <th scope="row">Modal</th>
+      <td class="version">SDK/CLI 1.6.2; Debian slim + Python 3.12 images</td>
+      <td>Runs the clinical worker on demand and persists model weights in a volume.</td>
+      <td><span class="status status--high">Review — image bases not digest-pinned; build uv is vulnerable.</span></td>
+    </tr>
+<tr data-layer="platform" data-risk="high">
+      <th scope="row">WebRTC browser APIs</th>
+      <td class="version">Browser-managed</td>
+      <td>Peer-to-peer consultation audio/video and recording.</td>
+      <td><span class="status status--high">HIGH application finding — signaling trusts client-asserted roles (SEC-03).</span></td>
+    </tr>
+<tr data-layer="platform" data-risk="review">
+      <th scope="row">Stripe Checkout</th>
+      <td class="version">API via stripe 22.6.2</td>
+      <td>Hosted patient payment and receipts; Watson avoids card handling.</td>
+      <td><span class="status status--review">SDK clear; live API/configuration not security-tested here.</span></td>
+    </tr>
+<tr data-layer="platform" data-risk="moderate">
+      <th scope="row">Google OAuth 2 / Calendar API</th>
+      <td class="version">Calendar v3</td>
+      <td>Reads free/busy windows and writes Watson booking events.</td>
+      <td><span class="status status--moderate">MODERATE application finding — callback lacks browser/transaction binding (SEC-05).</span></td>
+    </tr>
+<tr data-layer="platform" data-risk="review">
+      <th scope="row">WhatsApp APIs</th>
+      <td class="version">Graph API v26.0; Baileys Web protocol via rc14</td>
+      <td>Patient link codes, documents, replies, and reminders.</td>
+      <td><span class="status status--review">Review — Baileys path is unofficial; Graph API integration not live-tested.</span></td>
+    </tr>
+<tr data-layer="platform" data-risk="review">
+      <th scope="row">Resend HTTP API</th>
+      <td class="version">Unversioned endpoint</td>
+      <td>Emails owner operational notices from PostgreSQL via pg_net.</td>
+      <td><span class="status status--review">Review — no SDK lock; external API/configuration not scanned.</span></td>
+    </tr>
+<tr data-layer="models" data-risk="review">
+      <th scope="row">faster-whisper model</th>
+      <td class="version">large-v3-turbo alias</td>
+      <td>English/German/Slovak consultation transcription on CPU/int8.</td>
+      <td><span class="status status--review">Model review — repository revision and weight hash are not pinned.</span></td>
+    </tr>
+<tr data-layer="models" data-risk="review">
+      <th scope="row">Qwen form model</th>
+      <td class="version">unsloth/Qwen3.5-4B-GGUF · Q4_K_M</td>
+      <td>Locally fills structured forms from transcripts/documents.</td>
+      <td><span class="status status--review">Model review — Hub revision/hash not pinned; prompt-injection behavior untested.</span></td>
+    </tr>
+<tr data-layer="models" data-risk="review">
+      <th scope="row">RapidOCR models</th>
+      <td class="version">PP-OCRv5 mobile · Latin</td>
+      <td>OCR detection, classification, and recognition for patient documents.</td>
+      <td><span class="status status--review">Model review — downloaded artifacts are not revision/hash pinned.</span></td>
+    </tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="application-heading">
+      <h2 id="application-heading">Open application-security findings</h2>
+      <p class="section-note">The review baseline equals current HEAD. These code/configuration flaws remain applicable and are separate from package advisories.</p>
+      <div class="table-wrap">
+        <table>
+          <caption>Open findings from the repository security review</caption>
+          <thead><tr><th scope="col">Tool / component</th><th scope="col">Version / baseline</th><th scope="col">Why used</th><th scope="col">Vulnerability status</th></tr></thead>
+          <tbody><tr>
+      <th scope="row">Supabase Storage policy</th>
+      <td class="version">HEAD bd9b54d</td>
+      <td>Document object access and cleanup</td>
+      <td><span class="status status--high">HIGH · SEC-01 · orphaned objects become anonymously readable</span></td>
+    </tr>
+<tr>
+      <th scope="row">Patient identity RPCs</th>
+      <td class="version">HEAD bd9b54d</td>
+      <td>Link contacts, patients, consultations, and documents</td>
+      <td><span class="status status--high">HIGH · SEC-02 · unverified contact can attach to existing patient</span></td>
+    </tr>
+<tr>
+      <th scope="row">WebRTC + Supabase Realtime</th>
+      <td class="version">HEAD bd9b54d</td>
+      <td>Call signaling and peer admission</td>
+      <td><span class="status status--high">HIGH · SEC-03 · client-selected roles; payment/revocation bypass</span></td>
+    </tr>
+<tr>
+      <th scope="row">Booking RPC</th>
+      <td class="version">HEAD bd9b54d</td>
+      <td>Anonymous appointment booking and holds</td>
+      <td><span class="status status--moderate">MEDIUM · SEC-04 · contact rotation bypasses booking quota</span></td>
+    </tr>
+<tr>
+      <th scope="row">Google OAuth callback</th>
+      <td class="version">HEAD bd9b54d</td>
+      <td>Attach a Google Calendar account</td>
+      <td><span class="status status--moderate">MEDIUM · SEC-05 · state not browser-bound or one-time</span></td>
+    </tr>
+<tr>
+      <th scope="row">Clinical document worker</th>
+      <td class="version">HEAD bd9b54d</td>
+      <td>Read and OCR patient documents</td>
+      <td><span class="status status--moderate">MEDIUM · SEC-06 · consent withdrawal does not stop processing</span></td>
+    </tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="hf-heading">
+      <h2 id="hf-heading">Hugging Face improvement audit</h2>
+      <p class="section-note">Hub model cards, repository files, and official benchmark datasets checked 21 October 2026. Public scores are discovery evidence, not proof of Watson performance: most benchmarks do not reproduce two-speaker clinical calls, 32 kbit/s Opus, Slovak terminology, phone photos, Watson’s JSON schema, or its 4-CPU/8-GB Modal container.</p>
+
+      <div class="verdict-grid">
+        <article class="verdict">
+          <span class="pill">Keep baseline</span>
+          <h3>Speech · Whisper large-v3-turbo</h3>
+          <p>The 809M-parameter MIT model explicitly supports English, German, and Slovak. Watson’s own test favored it over Whisper small: 2.9% vs 3.1% English WER and 26% vs 55% Slovak WER. Public ASR rankings are useful screening, but real Slovak consultations remain the release gate.</p>
+        </article>
+        <article class="verdict">
+          <span class="pill">Shadow trial only</span>
+          <h3>Documents · RapidOCR PP-OCRv5</h3>
+          <p>Keep the small ONNX pipeline as production baseline. Trial LightOnOCR-2-1B only on a fixed corpus: its card covers German but not Slovak, requires a new Transformers/PyTorch path, and reports accelerator—not Watson CPU—performance. No public result justifies replacing RapidOCR now.</p>
+        </article>
+        <article class="verdict">
+          <span class="pill">Keep, test smaller</span>
+          <h3>Forms · Qwen3.5-4B Q4_K_M</h3>
+          <p>Keep the Apache-2.0 4B baseline. Its GGUF is 2.74 GB and already uses llama.cpp schema-constrained output. Benchmark the related 2B Q4_K_M (1.28 GB) as a latency/cost challenger, but promote it only if multilingual extraction, null handling, and evidence grounding do not regress.</p>
+        </article>
+      </div>
+
+      <h2 id="hf-actions-heading">Highest-value ML changes</h2>
+      <div class="table-wrap">
+        <table aria-labelledby="hf-actions-heading">
+          <caption>Evidence-backed changes, ordered by expected value and implementation risk</caption>
+          <thead><tr><th scope="col">Priority</th><th scope="col">Change</th><th scope="col">Why it improves Watson</th><th scope="col">Acceptance evidence</th></tr></thead>
+          <tbody>
+            <tr>
+              <th scope="row">P0 · all models</th>
+              <td>Pin every Hub download to a commit revision; record repository, revision, file size, and SHA-256 in a checked manifest. Fetch that exact revision and fail closed on hash mismatch.</td>
+              <td>Current fetches resolve mutable aliases. The speech command records the resolved revision only after downloading; form and OCR downloads do not record equivalent provenance. The faster-whisper alias also resolves through a renamed Hub repository.</td>
+              <td>A clean machine reproduces byte-identical artifacts; startup records the manifest identity; offline inference passes.</td>
+            </tr>
+            <tr>
+              <th scope="row">P0 · evaluation</th>
+              <td>Create one versioned, privacy-safe EN/DE/SK regression corpus and run it on the exact 4-CPU/8-GB deployment shape before any model or quantization change.</td>
+              <td>Hub leaderboards expose candidate models, but Watson’s domain, compression, language mix, schemas, and hardware decide actual quality and cost.</td>
+              <td>Every run stores model revision, settings, per-language quality, wall time, real-time factor/tokens per second, and peak RSS. CI compares against an approved baseline.</td>
+            </tr>
+            <tr>
+              <th scope="row">P1 · speech</th>
+              <td>Retain large-v3-turbo; seed the general-language suite with the original Google FLEURS EN/DE/SK test splits, then add consented real calls and a medical/Ayurvedic term set.</td>
+              <td>FLEURS provides a repeatable multilingual floor—792 Slovak, 862 German, and 647 English test rows—but only in-domain calls reveal clinical terminology, overlap, accents, and Opus damage.</td>
+              <td>Track normalized WER/CER, critical-term recall, hallucinated words during silence, language-detection accuracy, per-audio-minute time, and peak RSS. Report each language separately.</td>
+            </tr>
+            <tr>
+              <th scope="row">P1 · documents</th>
+              <td>Replace the “fewer than 20 characters” scan test with text-quality checks; detect mixed image/text pages; benchmark 144 vs 200 DPI; retain line confidence and layout evidence where available.</td>
+              <td>The current threshold can skip OCR on a mostly scanned PDF page that contains a small native-text or OCR overlay. Quality and confidence signals can route uncertain pages to review instead of silently feeding poor text into form filling.</td>
+              <td>Measure character error rate, exact field-value recovery, blank-page rate, page latency, and peak RSS on native PDFs, scans, skew, glare, blur, handwriting, and phone photos in all three languages.</td>
+            </tr>
+            <tr>
+              <th scope="row">P1 · forms</th>
+              <td>Build a deterministic extraction suite inspired by ExtractBench and IFStruct, but score Watson semantics rather than JSON validity alone.</td>
+              <td>llama.cpp already constrains output to the schema. Remaining risk is plausible but unsupported content: wrong nulls, wrong speaker, duplicated facts, missing evidence, bad document citations, and instructions embedded in untrusted transcripts/documents.</td>
+              <td>Score field exact/F1, null precision/recall, evidence entailment, citation validity, hallucination, prompt-injection resistance, EN/DE/SK parity, tokens per second, and peak RSS.</td>
+            </tr>
+            <tr>
+              <th scope="row">P2 · challengers</th>
+              <td>Run only two bounded trials: Qwen3.5-2B Q4_K_M for form speed, and LightOnOCR-2-1B for hard document pages. Keep challengers behind offline evaluation; do not add runtime model routing yet.</td>
+              <td>The 2B Qwen artifact is less than half the current GGUF size. LightOnOCR targets full-page structure, but lacks stated Slovak coverage and adds a large runtime stack. Both offer hypotheses, not validated upgrades.</td>
+              <td>Promote only when the challenger meets the approved per-language quality floor, stays within 8 GB including concurrent pipeline components, and produces a material measured latency/cost benefit.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="hf-benchmarks-heading">Benchmark fit and limits</h2>
+      <div class="table-wrap">
+        <table aria-labelledby="hf-benchmarks-heading">
+          <caption>Useful Hugging Face evaluation assets and how Watson should use them</caption>
+          <thead><tr><th scope="col">Asset</th><th scope="col">Useful signal</th><th scope="col">Watson limitation</th><th scope="col">Use</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><a href="https://huggingface.co/datasets/google/fleurs">Google FLEURS</a></th><td>Original CC BY 4.0 dataset includes EN, DE, and SK; test splits contain 647, 862, and 792 rows respectively.</td><td>Read speech, not clinical dialogue.</td><td>Regression floor and candidate screening, not production-quality proof.</td></tr>
+            <tr><th scope="row"><a href="https://huggingface.co/datasets/allenai/olmOCR-bench">olmOCR-bench</a></th><td>1,403 PDFs and 7,010 structural/text tests.</td><td>English, PDF-to-Markdown focus; not medical photos or Slovak.</td><td>Borrow test categories; use a small compatible subset for parser regressions.</td></tr>
+            <tr><th scope="row"><a href="https://huggingface.co/datasets/llamaindex/ParseBench">ParseBench</a></th><td>Tables, charts, faithfulness, semantic formatting, and visual grounding across 169K evaluation rows.</td><td>English enterprise documents; broader than Watson’s plain-text output contract.</td><td>Design coverage for difficult layouts and mixed-content pages.</td></tr>
+            <tr><th scope="row"><a href="https://huggingface.co/datasets/PaddlePaddle/Real5-OmniDocBench">Real5-OmniDocBench</a></th><td>6,775 images covering scan, warp, screen-photo, illumination, and skew conditions.</td><td>English/Chinese only and full document-parsing oriented.</td><td>Copy acquisition-condition perturbations into Watson’s OCR corpus.</td></tr>
+            <tr><th scope="row"><a href="https://huggingface.co/datasets/Delores-Lin/MDPBench">MDPBench</a></th><td>Multilingual digital and photographed document parsing; includes German.</td><td>No Slovak and no Dataset Viewer files at audit time.</td><td>German challenger screening when artifacts are reproducibly accessible.</td></tr>
+            <tr><th scope="row"><a href="https://huggingface.co/datasets/llamaindex/ExtractBench">ExtractBench</a></th><td>370 schema-driven document extraction cases with nulls and evidence grounding.</td><td>English documents and bounding-box evidence, unlike Watson’s transcript-line/page citations.</td><td>Adapt scoring concepts: exhaustive values, correct nulls, and grounded evidence.</td></tr>
+            <tr><th scope="row"><a href="https://huggingface.co/datasets/LiquidAI/ifstruct-v1.0">IFStruct v1.0</a></th><td>2,000 JSON/YAML schema-compliance prompts.</td><td>Scores structure without constrained decoding or content correctness; Watson uses a JSON schema grammar.</td><td>Stress unusual schemas, but never use as the main form-quality metric.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="hf-sources-heading">Model evidence</h2>
+      <ul class="source-list" aria-labelledby="hf-sources-heading">
+        <li><a href="https://huggingface.co/openai/whisper-large-v3-turbo">OpenAI Whisper large-v3-turbo</a> — MIT, 809M parameters, EN/DE/SK listed.</li>
+        <li><a href="https://huggingface.co/dropbox-dash/faster-whisper-large-v3-turbo">CTranslate2 Whisper conversion</a> — FP16 source artifact used with runtime int8 conversion.</li>
+        <li><a href="https://huggingface.co/unsloth/Qwen3.5-4B-GGUF">Qwen3.5-4B GGUF</a> — Apache-2.0; selected Q4_K_M file is 2.74 GB.</li>
+        <li><a href="https://huggingface.co/unsloth/Qwen3.5-2B-GGUF">Qwen3.5-2B GGUF</a> — Apache-2.0; Q4_K_M challenger is 1.28 GB.</li>
+        <li><a href="https://huggingface.co/lightonai/LightOnOCR-2-1B">LightOnOCR-2-1B</a> — Apache-2.0, 1B parameters; German listed, Slovak not listed.</li>
+        <li><a href="https://huggingface.co/PaddlePaddle/PP-OCRv5_mobile_det_onnx">PP-OCRv5 mobile detector ONNX</a> — Apache-2.0 reference for the current OCR family.</li>
+      </ul>
+
+      <h2 id="licence-heading">Licence and commercial-use fit</h2>
+      <p class="section-note">Repository metadata checked 21 October 2026. “Commercial use” below describes the licence’s general permission, not legal advice. Preserve licence and attribution files in the model manifest and review all source terms before release.</p>
+      <div class="table-wrap">
+        <table aria-labelledby="licence-heading">
+          <caption>Licences for production models, challengers, and proposed evaluation data</caption>
+          <thead><tr><th scope="col">Artifact</th><th scope="col">Licence</th><th scope="col">Commercial fit</th><th scope="col">Watson obligation / decision</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Whisper large-v3-turbo + CTranslate2 conversion</th><td>MIT</td><td>Yes</td><td>Keep copyright and licence notice with redistributed copies. No model licence fee or warranty.</td></tr>
+            <tr><th scope="row">Qwen3.5-4B and Qwen3.5-2B GGUF</th><td>Apache-2.0</td><td>Yes</td><td>Keep licence/NOTICE material, mark modifications, and retain attribution. Includes an express patent grant; no model licence fee.</td></tr>
+            <tr><th scope="row">PP-OCRv5 / PaddleOCR reference artifacts</th><td>Apache-2.0</td><td>Yes</td><td>Keep licence/NOTICE material and verify that the exact three files downloaded by RapidOCR carry the expected source and licence in the provenance manifest.</td></tr>
+            <tr><th scope="row">LightOnOCR-2-1B challenger</th><td>Apache-2.0</td><td>Yes</td><td>Same Apache notice/attribution duties. Runtime dependencies have separate licences and must be inventoried before adoption.</td></tr>
+            <tr><th scope="row"><a href="https://huggingface.co/datasets/google/fleurs">Google FLEURS</a></th><td>CC BY 4.0</td><td>Yes, with attribution</td><td>Use the original EN/DE/SK subsets; record creator/source, licence, and changes in benchmark output.</td></tr>
+            <tr><th scope="row"><a href="https://huggingface.co/datasets/hf-audio/open-asr-leaderboard-multilingual-datasets">HF Open ASR aggregate</a></th><td>CC BY-NC-SA 4.0</td><td>No general commercial use</td><td>Do not make this aggregate the commercial CI corpus. Prefer original FLEURS under CC BY 4.0 and review each source dataset separately.</td></tr>
+            <tr><th scope="row"><a href="https://huggingface.co/datasets/allenai/olmOCR-bench">olmOCR-bench</a></th><td>ODC-BY-1.0; card also cites AI2 Responsible Use Guidelines</td><td>Conditional</td><td>Attribution required. Use as design inspiration until database, source-document, and Responsible Use terms receive project-specific review.</td></tr>
+            <tr><th scope="row">ParseBench, ExtractBench, IFStruct, Real5-OmniDocBench, MDPBench</th><td>Apache-2.0</td><td>Yes</td><td>Retain notices and attribution. Individual source documents may still carry additional rights; use only approved subsets.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="cost-heading">Cost estimate</h2>
+      <p class="section-note">USD list-price estimate from <a href="https://modal.com/pricing">Modal pricing</a>, checked 21 October 2026. Current worker requests four physical CPU cores and 8 GiB memory. Actual invoices vary with runtime, cold starts, retries, storage, traffic, taxes, and regional multipliers.</p>
+      <div class="table-wrap">
+        <table aria-labelledby="cost-heading">
+          <caption>Marginal licence and infrastructure cost for the current local/private design</caption>
+          <thead><tr><th scope="col">Item</th><th scope="col">List rate / basis</th><th scope="col">Watson estimate</th><th scope="col">Notes</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Hugging Face model artifacts</th><td>$0 listed licence fee</td><td>$0 per download, excluding bandwidth/storage</td><td>Watson downloads public weights once and performs local inference; it does not call a paid HF inference endpoint.</td></tr>
+            <tr><th scope="row">Modal worker compute</th><td>$0.0000131/core-second + $0.00000222/GiB-second</td><td><strong>$0.00421/minute · $0.2526/hour</strong></td><td>Calculation: four cores plus 8 GiB at base-region function rates. Region selection can multiply base prices by 1.15–1.75.</td></tr>
+            <tr><th scope="row">Observed dress-rehearsal workload</th><td>About seven active worker minutes</td><td>About $0.029 compute</td><td>Uses the recorded two-minute transcription plus five-minute form fill; document time is negligible in this rough example. Not a guaranteed per-consultation price.</td></tr>
+            <tr><th scope="row">Idle shutdown tail</th><td>150 seconds after work stops</td><td>Up to about $0.0105 per drain cycle</td><td>If the worker remains fully allocated for the configured idle window. Batched jobs share this tail.</td></tr>
+            <tr><th scope="row">Illustrative consultation total</th><td>Seven active minutes + one 150-second idle tail</td><td>About <strong>$0.040 each</strong>; $4/100; $20/500; $40/1,000</td><td>Compute only. Real audio length and form generation time dominate. Measure p50/p95 billing duration before budgeting.</td></tr>
+            <tr><th scope="row">Timeout and retries</th><td>One-hour timeout; two retries</td><td>$0.253 for one full attempt; up to about $0.758 for three full attempts</td><td>Upper-bound compute exposure for repeated one-hour failures, excluding the wake function and storage.</td></tr>
+            <tr><th scope="row">Persistent model volume</th><td>$0.09/GiB-month</td><td>At least $0.37/month</td><td>The known Whisper and Qwen files total 4.06 GiB. OCR files, metadata, old revisions, and filesystem overhead add cost; prune only after verified replacement.</td></tr>
+            <tr><th scope="row">Network egress</th><td>$0.04/GiB; Starter includes 1 TiB/month</td><td>Likely small, but unmeasured</td><td>Track worker-to-Supabase output and model-fetch traffic separately. Do not assume every transfer direction is billable.</td></tr>
+            <tr><th scope="row">Modal Starter plan</th><td>$0 fixed + compute; $30/month credits</td><td>Credits equal about 119 worker-hours at the base rate</td><td>Useful for synthetic/non-PHI cost testing. Modal does not list Starter as HIPAA compatible.</td></tr>
+            <tr><th scope="row">Regulated patient data on Modal</th><td>Compliance-dependent; Enterprise is custom priced</td><td><strong>Unknown until legal and vendor review</strong></td><td>If HIPAA applies, Modal lists compatibility only for Enterprise, so obtain a quote and BAA. For EU health data, separately verify the DPA, processing region, transfer mechanism, and subprocessors.</td></tr>
+            <tr><th scope="row">Local laptop execution</th><td>No cloud/API fee</td><td>Existing hardware + electricity</td><td>Still carries operational, backup, security, and staff-time costs; benchmark wall power if this becomes the production route.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="recommendations-heading">
+      <h2 id="recommendations-heading">Recommended order</h2>
+      <ol class="recommendations">
+        <li>Update pnpm, uv, Pillow, and certifi; regenerate locks; rerun OSV/npm audits and worker image/document tests.</li>
+        <li>Resolve SEC-01, SEC-02, and SEC-03 before real patient use; then SEC-06, SEC-04, and SEC-05.</li>
+        <li>Force braces 3.0.4+ and compression 1.8.2+; keep diskcache disabled until upstream provides a safe release.</li>
+        <li>Pin Docker images by digest, GitHub Actions by commit SHA, and model artifacts by revision/hash; lock FastAPI/Modal transitive dependencies.</li>
+        <li>Add the EN/DE/SK ML regression harness and provenance manifest before changing models; fix mixed-page OCR detection next.</li>
+        <li>Keep current ML baselines. Evaluate Qwen3.5-2B and LightOnOCR-2-1B offline; promote only from Watson-specific quality, memory, and latency evidence.</li>
+        <li>Use original CC BY 4.0 FLEURS subsets—not the non-commercial Open ASR aggregate—for commercial regression tests; retain model and dataset attribution manifests.</li>
+        <li>Before processing real patient data on Modal, complete vendor/data-transfer review. If HIPAA applies, obtain Enterprise pricing and a BAA; if GDPR applies, verify the DPA, region, transfer mechanism, and subprocessors.</li>
+      </ol>
+    </section>
+
+    <footer>
+      <p class="limits"><strong>Evidence:</strong> package manifests, pnpm/npm/uv/Deno locks, pyproject.toml, Dockerfile, CI workflow, Supabase configuration and migrations, deployment scripts, source imports, <code>docs/security-review-2026-10-18.md</code>, live Hugging Face Hub metadata/model cards, and official benchmark dataset cards. Scans used OSV-Scanner 2.7.0, pnpm audit, npm audit, and OSV querybatch.</p>
+      <p class="limits"><strong>Limits:</strong> Docker/OS image scanning, hosted configuration verification, live external-service testing, and candidate-model execution on Watson’s deployment hardware were unavailable. Hub metadata and download counts can change; linked cards are the source of record.</p>
+    </footer>
+    </section>
+
+    <section class="report-view" id="architecture" data-page="architecture" aria-labelledby="architecture-title">
+      <header>
+        <p class="eyebrow">Architecture and workflow</p>
+        <h1 id="architecture-title" tabindex="-1">How Watson currently works</h1>
+        <p class="subtitle">Current implementation at repository HEAD <code>bd9b54d</code> · component boundaries, data movement, processing lanes, state changes, and failure behavior.</p>
+      </header>
+
+      <div class="arch-summary" aria-label="Architecture summary">
+        <div class="arch-stat"><strong>5</strong><span>Runtime trust zones: public patient, practitioner, Supabase, worker, providers</span></div>
+        <div class="arch-stat"><strong>3</strong><span>Separate ML lanes: transcription, document reading, form extraction</span></div>
+        <div class="arch-stat"><strong>2</strong><span>Audio tracks recorded in the practitioner browser; video is not stored</span></div>
+        <div class="arch-stat"><strong>1</strong><span>Worker item at a time, prioritized transcription → documents → forms</span></div>
+        <div class="arch-stat"><strong>0</strong><span>Hosted inference API calls; current model execution is inside the worker</span></div>
+      </div>
+
+      <aside class="scope-banner" aria-labelledby="architecture-scope">
+        <strong id="architecture-scope">Implementation scope</strong>
+        This is a development proof of concept using invented data. The diagram reflects repository code and deployment scripts, not verified live infrastructure, regulatory approval, or a target-state design.
+      </aside>
+
+      <section aria-labelledby="topology-heading">
+        <h2 id="topology-heading">System topology and trust boundaries</h2>
+        <p class="section-note">Solid arrows carry application data or control calls. The green path is browser-to-browser WebRTC media. Dashed paths are setup or scheduled operations.</p>
+        <figure class="diagram">
+          <svg viewBox="0 0 1200 650" role="img" aria-labelledby="topology-title topology-desc">
+            <title id="topology-title">Watson current system topology</title>
+            <desc id="topology-desc">Patient and practitioner browsers load a static Render app and use Supabase. WebRTC media travels directly between browsers. Supabase stores workflow and media, wakes a Modal worker, and connects to Stripe, Google Calendar, the Render WhatsApp gateway, and Resend.</desc>
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--muted)" />
+              </marker>
+            </defs>
+
+            <rect class="svg-zone" x="22" y="42" width="250" height="560" rx="14" />
+            <text class="svg-zone-title" x="42" y="70">User devices</text>
+            <rect class="svg-zone" x="302" y="42" width="445" height="560" rx="14" />
+            <text class="svg-zone-title" x="322" y="70">Supabase · Frankfurt</text>
+            <rect class="svg-zone" x="777" y="42" width="180" height="560" rx="14" />
+            <text class="svg-zone-title" x="797" y="70">Modal</text>
+            <rect class="svg-zone" x="987" y="42" width="191" height="560" rx="14" />
+            <text class="svg-zone-title" x="1007" y="70">External providers</text>
+
+            <rect class="svg-node" x="47" y="104" width="200" height="72" rx="10" />
+            <text class="svg-label" x="147" y="133" text-anchor="middle">Patient browser</text>
+            <text class="svg-small" x="147" y="153" text-anchor="middle">No account · invite token</text>
+
+            <rect class="svg-node" x="47" y="250" width="200" height="72" rx="10" />
+            <text class="svg-label" x="147" y="279" text-anchor="middle">Practitioner browser</text>
+            <text class="svg-small" x="147" y="299" text-anchor="middle">Supabase Auth session</text>
+
+            <rect class="svg-node--external" x="47" y="436" width="200" height="88" rx="10" />
+            <text class="svg-label" x="147" y="466" text-anchor="middle">Render static site</text>
+            <text class="svg-small" x="147" y="486" text-anchor="middle">Next.js export · no app server</text>
+            <text class="svg-small" x="147" y="504" text-anchor="middle">delivered to both browsers</text>
+
+            <rect class="svg-node" x="327" y="104" width="180" height="72" rx="10" />
+            <text class="svg-label" x="417" y="133" text-anchor="middle">Auth + Data API</text>
+            <text class="svg-small" x="417" y="153" text-anchor="middle">JWT · RLS · RPC grants</text>
+
+            <rect class="svg-node--accent" x="542" y="104" width="180" height="72" rx="10" />
+            <text class="svg-label" x="632" y="133" text-anchor="middle">PostgreSQL 17</text>
+            <text class="svg-small" x="632" y="153" text-anchor="middle">State · jobs · clinical text</text>
+
+            <rect class="svg-node" x="327" y="250" width="180" height="72" rx="10" />
+            <text class="svg-label" x="417" y="279" text-anchor="middle">Realtime</text>
+            <text class="svg-small" x="417" y="299" text-anchor="middle">WebRTC signaling only</text>
+
+            <rect class="svg-node" x="542" y="250" width="180" height="72" rx="10" />
+            <text class="svg-label" x="632" y="279" text-anchor="middle">Private Storage</text>
+            <text class="svg-small" x="632" y="299" text-anchor="middle">Audio · PDF · images</text>
+
+            <rect class="svg-node" x="327" y="436" width="180" height="88" rx="10" />
+            <text class="svg-label" x="417" y="466" text-anchor="middle">Edge Functions</text>
+            <text class="svg-small" x="417" y="486" text-anchor="middle">Payment · Google</text>
+            <text class="svg-small" x="417" y="504" text-anchor="middle">WhatsApp · webhooks</text>
+
+            <rect class="svg-node" x="542" y="436" width="180" height="88" rx="10" />
+            <text class="svg-label" x="632" y="466" text-anchor="middle">Cron + pg_net + Vault</text>
+            <text class="svg-small" x="632" y="486" text-anchor="middle">5-minute schedules</text>
+            <text class="svg-small" x="632" y="504" text-anchor="middle">wake + service secrets</text>
+
+            <rect class="svg-node--accent" x="802" y="152" width="130" height="104" rx="10" />
+            <text class="svg-label" x="867" y="183" text-anchor="middle">Clinical worker</text>
+            <text class="svg-small" x="867" y="205" text-anchor="middle">4 CPU · 8 GiB</text>
+            <text class="svg-small" x="867" y="223" text-anchor="middle">max one container</text>
+            <text class="svg-small" x="867" y="241" text-anchor="middle">dedicated account</text>
+
+            <rect class="svg-node" x="802" y="376" width="130" height="88" rx="10" />
+            <text class="svg-label" x="867" y="407" text-anchor="middle">Model volume</text>
+            <text class="svg-small" x="867" y="429" text-anchor="middle">Whisper · RapidOCR</text>
+            <text class="svg-small" x="867" y="447" text-anchor="middle">Qwen GGUF</text>
+
+            <rect class="svg-node--external" x="1012" y="92" width="141" height="58" rx="9" />
+            <text class="svg-label" x="1082" y="126" text-anchor="middle">Stripe Checkout</text>
+            <rect class="svg-node--external" x="1012" y="177" width="141" height="58" rx="9" />
+            <text class="svg-label" x="1082" y="211" text-anchor="middle">Google Calendar</text>
+            <rect class="svg-node--external" x="1012" y="262" width="141" height="76" rx="9" />
+            <text class="svg-label" x="1082" y="291" text-anchor="middle">WhatsApp</text>
+            <text class="svg-small" x="1082" y="313" text-anchor="middle">Render gateway + network</text>
+            <rect class="svg-node--external" x="1012" y="365" width="141" height="58" rx="9" />
+            <text class="svg-label" x="1082" y="399" text-anchor="middle">Google STUN</text>
+            <rect class="svg-node--external" x="1012" y="450" width="141" height="58" rx="9" />
+            <text class="svg-label" x="1082" y="484" text-anchor="middle">Resend notices</text>
+            <rect class="svg-node--external" x="1012" y="535" width="141" height="46" rx="9" />
+            <text class="svg-label" x="1082" y="563" text-anchor="middle">Hugging Face</text>
+
+            <path class="svg-line" d="M247 140 H327" />
+            <path class="svg-line" d="M247 286 H327" />
+            <path class="svg-line" d="M507 140 H542" />
+            <path class="svg-line" d="M247 286 H327" />
+            <path class="svg-line" d="M247 140 C285 140 285 286 327 286" />
+            <path class="svg-line" d="M247 286 C285 286 285 140 327 140" />
+            <path class="svg-line" d="M507 286 H542" />
+            <path class="svg-line" d="M507 480 H542" />
+            <path class="svg-line svg-line--dash" d="M722 480 C760 480 760 204 802 204" />
+            <path class="svg-line" d="M802 228 C765 228 765 286 722 286" />
+            <path class="svg-line" d="M802 180 C760 180 760 140 722 140" />
+            <path class="svg-line" d="M867 376 V256" />
+            <path class="svg-line" d="M507 480 C760 480 760 121 1012 121" />
+            <path class="svg-line" d="M507 480 C760 480 760 206 1012 206" />
+            <path class="svg-line" d="M507 480 H760 C840 480 880 300 1012 300" />
+            <path class="svg-line svg-line--dash" d="M722 480 C840 480 890 479 1012 479" />
+            <path class="svg-line svg-line--dash" d="M932 420 C970 420 970 558 1012 558" />
+            <path class="svg-line" d="M247 140 C650 140 650 394 1012 394" />
+            <path class="svg-line" d="M247 286 C650 286 650 394 1012 394" />
+            <path class="svg-line svg-line--media" d="M147 176 V250" />
+            <text class="svg-small" x="158" y="220">encrypted WebRTC media</text>
+          </svg>
+          <figcaption>Clinical records and private files centralize in Supabase. Live media does not traverse an application media server. The worker receives only claimed-job inputs and returns validated results.</figcaption>
+        </figure>
+      </section>
+
+      <section aria-labelledby="components-heading">
+        <h2 id="components-heading">Component responsibilities</h2>
+        <div class="component-grid">
+          <article class="component-card"><h3>Static web app · Render</h3><p>Practitioner and patient UI, Supabase client calls, browser WebRTC, two-track recording, uploads, and review. No application server runs with the static export.</p></article>
+          <article class="component-card"><h3>Supabase · control plane</h3><p>Authentication, RLS, workflow state, audit events, private objects, signaling, Edge Functions, schedules, Vault secrets, leases, and atomic result validation.</p></article>
+          <article class="component-card"><h3>Clinical worker · Modal</h3><p>On-demand Python worker with one container. Claims jobs using its own account, downloads only leased files, runs local models, sends heartbeats, and submits all-or-nothing results.</p></article>
+          <article class="component-card"><h3>WhatsApp gateway · Render</h3><p>Baileys linked-device bridge. Filters traffic, downloads allowed patient files, polls reminders, and stores sealed pairing state through the WhatsApp Edge Function.</p></article>
+          <article class="component-card"><h3>Stripe + Google Calendar</h3><p>Stripe hosts payment and returns signed/verified completion. Google supplies primary-calendar busy windows and receives bookings in a dedicated Watson calendar.</p></article>
+          <article class="component-card"><h3>Owner operations</h3><p>Database schedules check calendars and gateway health. Resend warns when the Modal allowance is exhausted or WhatsApp needs attention.</p></article>
+        </div>
+      </section>
+
+      <section aria-labelledby="workflow-heading">
+        <h2 id="workflow-heading">Consultation workflow</h2>
+        <p class="section-note">The database is the workflow authority. Browser and worker actions move records through guarded RPC transitions.</p>
+        <div class="flow" aria-label="Six-stage consultation workflow">
+          <div class="flow-step"><strong>Book and pay</strong><span>Availability subtracts consultations and cached Google busy time. Paid bookings hold a slot for 35 minutes.</span></div>
+          <div class="flow-step"><strong>Send documents</strong><span>Patient, practitioner, or linked WhatsApp uploads PDF/images to private Storage, then confirms byte count.</span></div>
+          <div class="flow-step"><strong>Meet by video</strong><span>Realtime carries signaling. WebRTC carries encrypted audio/video directly. No TURN relay exists.</span></div>
+          <div class="flow-step"><strong>Save two tracks</strong><span>Practitioner browser records both voices separately at 32 kbit/s and uploads after call end. Video is not saved.</span></div>
+          <div class="flow-step"><strong>Process in order</strong><span>Modal wakes. Worker prioritizes transcription, then document OCR, then schema-constrained form filling.</span></div>
+          <div class="flow-step"><strong>Review and approve</strong><span>Practitioner checks transcript evidence and accepts, edits, or rejects every generated non-empty form answer.</span></div>
+        </div>
+      </section>
+
+      <section aria-labelledby="lanes-heading">
+        <h2 id="lanes-heading">ML processing lanes</h2>
+        <div class="lane-grid">
+          <article class="lane">
+            <div class="lane__head"><span>Lane 01</span><h3>Transcription</h3></div>
+            <ol>
+              <li>Claim oldest queued transcription with a two-minute renewable lease.</li>
+              <li>Validate file format, size, SHA-256, and measured duration.</li>
+              <li>Run faster-whisper large-v3-turbo once per speaker track.</li>
+              <li>Merge on the shared browser clock; validate and commit transcript atomically.</li>
+              <li>Auto-queue form work when a template exists.</li>
+            </ol>
+          </article>
+          <article class="lane">
+            <div class="lane__head"><span>Lane 02</span><h3>Document OCR / parsing</h3></div>
+            <ol>
+              <li>Claim oldest confirmed waiting document.</li>
+              <li>Use native PDF text when a page has at least 20 characters.</li>
+              <li>Otherwise render at about 144 DPI and run RapidOCR PP-OCRv5 Latin.</li>
+              <li>Store up to 30 pages and 20,000 characters per page.</li>
+              <li>Mark empty output unreadable; stale claims recover after ten minutes.</li>
+            </ol>
+          </article>
+          <article class="lane">
+            <div class="lane__head"><span>Lane 03</span><h3>Form extraction</h3></div>
+            <ol>
+              <li>Load current template, transcript lines, and newest readable document text.</li>
+              <li>Run Qwen3.5-4B Q4_K_M through llama.cpp with a JSON schema.</li>
+              <li>Require transcript/document evidence; discard citations that do not exist.</li>
+              <li>Commit the whole draft and evidence set atomically.</li>
+              <li>Require practitioner decisions before final approval.</li>
+            </ol>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="states-heading">
+        <h2 id="states-heading">State, retries, and shutdown</h2>
+        <div class="component-grid">
+          <article class="component-card"><h3>Primary state path</h3><p><code>consent_pending → ready_for_audio → audio_imported → transcription_processing → transcript_ready → extraction_processing → draft_ready → under_review → approved</code></p></article>
+          <article class="component-card"><h3>Failure branches</h3><p>Transcription and extraction move to explicit failed states and can be retried. Stale transcription/form leases recover after two minutes; document claims recover after ten.</p></article>
+          <article class="component-card"><h3>Attempt ownership</h3><p>Every engine heartbeat and result carries job ID, attempt number, and engine identity. Cancelled, late, or superseded attempts cannot commit.</p></article>
+          <article class="component-card"><h3>Safe drain</h3><p>The worker waits through an idle window. Stop and wake share a database advisory lock; shutdown is refused when work arrives during the race.</p></article>
+          <article class="component-card"><h3>Cost guard</h3><p>On-demand database accounting allows three engine-hours per month. Modal’s budget and credit are separate caps. Exhaustion leaves work queued and alerts the owner.</p></article>
+          <article class="component-card"><h3>Consent withdrawal</h3><p>Current RPC cancels transcription, removes transcript/track records, and asks the browser to delete audio. It does not yet stop document processing; see SEC-06.</p></article>
+        </div>
+      </section>
+
+      <section aria-labelledby="boundaries-heading">
+        <h2 id="boundaries-heading">Credentials and data boundaries</h2>
+        <dl class="boundary-list">
+          <div class="boundary"><dt>Patient capability</dt><dd>Eight-character short code resolves to a 64-character invite token. The token gates join-page RPCs and names the public signaling topic; it has no explicit expiry.</dd></div>
+          <div class="boundary"><dt>Practitioner identity</dt><dd>Supabase JWT plus RLS and owner-checking RPCs. Practitioner reads are scoped to consultations they own.</dd></div>
+          <div class="boundary"><dt>Engine identity</dt><dd>Dedicated Auth account registered in <code>engines</code>. Job-scoped Storage reads, leased RPCs, no service key, no listening port.</dd></div>
+          <div class="boundary"><dt>Service secrets</dt><dd>Stripe, Google, cron, gateway, Modal wake, Resend, and owner contact values stay in Edge Function secrets, Modal secrets, or Supabase Vault.</dd></div>
+          <div class="boundary"><dt>Clinical content</dt><dd>Audio/documents live in private buckets. Extracted page text, transcript segments, and form answers live in PostgreSQL. Audit metadata excludes clinical text.</dd></div>
+          <div class="boundary"><dt>Ephemeral content</dt><dd>Live video is never stored. Worker transcription audio is removed with its temporary directory. Browser recording persists only after successful upload.</dd></div>
+        </dl>
+
+        <div class="risk-callout">
+          <h3>Open boundary failures block real-patient use</h3>
+          <p>Six application findings remain open: orphan document access, unverified patient linking, unauthenticated signaling roles, booking abuse, unbound Google OAuth state, and document processing after consent withdrawal. See the <a href="#inventory">inventory page</a> and <a href="security-review-2026-10-18.md">the full security review</a>.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="architecture-source-heading">
+        <h2 id="architecture-source-heading">Reviewable source documentation</h2>
+        <p>The detailed component map, data lifecycle, workflow narratives, state diagram, retry rules, and source file index are maintained in <a href="architecture-and-workflow.md"><code>docs/architecture-and-workflow.md</code></a>.</p>
+      </section>
+
+      <footer>
+        <p class="limits"><strong>Primary implementation evidence:</strong> <code>apps/web/src/lib/call.ts</code>, room/join pages, Supabase migrations and Edge Functions, the clinical worker engine/OCR/form modules, Modal deployment, WhatsApp gateway, and deployment scripts.</p>
+        <p class="limits"><strong>Limits:</strong> This view does not prove hosted configuration, provider availability, data residency, regulatory suitability, or current live deployment health. It deliberately preserves the security report’s unresolved findings.</p>
+      </footer>
+    </section>
+
+    <section class="report-view" id="roadmap" data-page="roadmap" aria-labelledby="roadmap-title">
+      <header>
+        <p class="eyebrow">Roadmap and current status</p>
+        <h1 id="roadmap-title" tabindex="-1">What is built, partial, pending, or blocked</h1>
+        <p class="subtitle">Reviewed 21 October 2026 against repository code, migrations, deployment scripts, decision records, the build specification, and the open security review.</p>
+      </header>
+
+      <div class="roadmap-summary" aria-label="Roadmap status summary">
+        <div class="roadmap-stat"><strong>9</strong><span>Phase 1 slices with implementation-backed core paths</span></div>
+        <div class="roadmap-stat"><strong>2</strong><span>Phase 1 slices still partial: transcript review and evaluation</span></div>
+        <div class="roadmap-stat"><strong>6</strong><span>Open application-security findings blocking Gate R</span></div>
+        <div class="roadmap-stat"><strong>0</strong><span>Claims here that current hosted services are live or healthy</span></div>
+      </div>
+
+      <aside class="scope-banner" aria-labelledby="roadmap-scope">
+        <strong id="roadmap-scope">Status evidence, not uptime evidence</strong>
+        “Implemented” means a working path is present in repository source and migrations. Historical live-test dates remain useful evidence, but this review did not verify today’s Render, Supabase, Modal, Stripe, Google Calendar, WhatsApp, or Resend state. Watson remains a development proof of concept using invented data only.
+      </aside>
+
+      <section aria-labelledby="delivery-sequence-heading">
+        <h2 id="delivery-sequence-heading">Delivery sequence</h2>
+        <div class="status-key" aria-label="Roadmap status legend">
+          <span class="roadmap-status roadmap-status--done">Done</span>
+          <span class="roadmap-status roadmap-status--partial">Partial / in progress</span>
+          <span class="roadmap-status roadmap-status--pending">Pending</span>
+          <span class="roadmap-status roadmap-status--blocked">Blocked</span>
+        </div>
+
+        <div class="roadmap-track">
+          <article class="roadmap-phase">
+            <h3>Phase 0 · Foundations</h3>
+            <div><p>Repository, original transcription engine, transcript schema, privacy-conscious logging, and first hosted demo.</p></div>
+            <span class="roadmap-status roadmap-status--done">Done</span>
+          </article>
+          <article class="roadmap-phase">
+            <h3>Phase 1 · Web transcription</h3>
+            <div>
+              <p>Most product paths now exist. Nine slices have implementation-backed core behavior; transcript review and representative benchmarking remain incomplete.</p>
+              <div class="slice-list" aria-label="Phase 1 slice status">
+                <span class="slice">1.1 sign-in</span><span class="slice">1.2 audio</span><span class="slice">1.3 transcription</span><span class="slice">1.4 room</span><span class="slice">1.5 form</span><span class="slice">1.5b payment</span><span class="slice">1.8 booking</span><span class="slice">1.9 Modal</span><span class="slice">1.10 WhatsApp</span><span class="slice">1.6 partial</span><span class="slice">1.7 partial</span>
+              </div>
+            </div>
+            <span class="roadmap-status roadmap-status--partial">In progress</span>
+          </article>
+          <article class="roadmap-phase">
+            <h3>Phase 2 · Draft to record</h3>
+            <div><p>Draft generation, evidence display, split review, and one-step approval arrived early. Add-item review, two-step approval, immutable versions, report/export, retention deletion, and H2/H3 evidence remain.</p></div>
+            <span class="roadmap-status roadmap-status--partial">Partial</span>
+          </article>
+          <article class="roadmap-phase">
+            <h3>Phase 3 · Consultation room</h3>
+            <div><p>The browser-to-browser call, consent path, two-track recording, upload, and transcription handoff shipped early in slice 1.4. TURN coverage, interrupted-call recovery, and formal phase exit proof remain.</p></div>
+            <span class="roadmap-status roadmap-status--partial">Partial</span>
+          </article>
+          <article class="roadmap-phase">
+            <h3>Gate R · Real patients</h3>
+            <div><p>Three high and three medium application findings remain open. Legal, vendor, data-transfer, security-hardening, and owner decisions also require closure before real-patient use.</p></div>
+            <span class="roadmap-status roadmap-status--blocked">Blocked</span>
+          </article>
+          <article class="roadmap-phase">
+            <h3>Phase 4 · Small MVP</h3>
+            <div><p>About five practitioners, real-use operations, support, and measured learning. Cannot begin before Gate R.</p></div>
+            <span class="roadmap-status roadmap-status--pending">Pending</span>
+          </article>
+          <article class="roadmap-phase">
+            <h3>Phase 5 · Marketable product</h3>
+            <div><p>Minimum marketable product work follows validated MVP evidence and unresolved commercial decisions.</p></div>
+            <span class="roadmap-status roadmap-status--pending">Pending</span>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="delivered-heading">
+        <h2 id="delivered-heading">Current implementation versus remaining definition of done</h2>
+        <div class="roadmap-columns">
+          <article class="roadmap-panel">
+            <h3>Implementation-backed now</h3>
+            <ul>
+              <li>Practitioner sign-in, consultation list, creation, consent, two-track upload, transcription status, and merged transcript.</li>
+              <li>Consultation room, patient link, WebRTC call, two-track recording, payment test-mode flow, and automatic processing handoff.</li>
+              <li>Evidence-grounded form filling with accept, edit, reject, one-step approval, document OCR, and late-document “Fill in again.”</li>
+              <li>Public booking, short links, reminders, Google Calendar integration code, Modal wake/drain, and Render-targeted WhatsApp gateway.</li>
+            </ul>
+          </article>
+          <article class="roadmap-panel">
+            <h3>Still required</h3>
+            <ol>
+              <li>Complete transcript correction, search, synchronized playback, reviewed state, export, and durable deletion behavior.</li>
+              <li>Build representative EN/DE/SK quality and latency evaluation; produce formal H2 and H3 results.</li>
+              <li>Add full Phase 2 draft semantics, two-step approval, immutable version history, report/export, and retention controls.</li>
+              <li>Resolve all six security findings, then verify provider configuration and current hosted operation.</li>
+            </ol>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="runtime-heading">
+        <h2 id="runtime-heading">Intended current runtime path</h2>
+        <p class="section-note">These destinations come from repository configuration and decision 0009. Availability was not checked.</p>
+        <div class="runtime-grid">
+          <div class="runtime"><strong>Web app · Render</strong><span>Static Next.js export for practitioner and patient browsers.</span><em>Current health unverified</em></div>
+          <div class="runtime"><strong>Control plane · Supabase</strong><span>Auth, PostgreSQL, Storage, Realtime, functions, schedules, and Vault.</span><em>Hosted drift unverified</em></div>
+          <div class="runtime"><strong>Clinical engine · Modal</strong><span>On-demand transcription, document reading, and form generation.</span><em>Wake and drain unverified</em></div>
+          <div class="runtime"><strong>WhatsApp gateway · Render</strong><span>Watson-owned linked-device bridge; Google Cloud is no longer the plan.</span><em>Pairing unverified</em></div>
+        </div>
+      </section>
+
+      <section aria-labelledby="roadmap-source-heading">
+        <h2 id="roadmap-source-heading">Source-controlled roadmap</h2>
+        <p>The detailed slice table, preserved historical measurements, open checklists, and next-proof list live in <a href="roadmap.md"><code>docs/roadmap.md</code></a>. Formal definitions and exit criteria remain in <a href="../MASTER_BUILD_SPEC.md"><code>MASTER_BUILD_SPEC.md</code></a>.</p>
+        <p>The broader booking and clinic-management target is compared against the implementation on the <a href="#requirements">requirements page</a>, with the normative register in <a href="industry-standard-booking-requirements.md"><code>docs/industry-standard-booking-requirements.md</code></a>.</p>
+        <div class="risk-callout">
+          <h3>Gate R remains blocked</h3>
+          <p>See <a href="security-review-2026-10-18.md">the full security review</a> for the six unresolved findings and acceptance tests. Source-complete features are not approved for real-patient use.</p>
+        </div>
+      </section>
+
+      <footer>
+        <p class="limits"><strong>Primary status evidence:</strong> <code>docs/roadmap.md</code>, section 21 of <code>MASTER_BUILD_SPEC.md</code>, decisions 0005/0007/0009, web routes, Supabase migrations and functions, clinical-worker benchmarks, fixtures, and deployment scripts.</p>
+        <p class="limits"><strong>Limits:</strong> No live deployment, external-provider account, production configuration, current uptime, or real-patient workflow was exercised for this status review.</p>
+      </footer>
+    </section>
+
+    <section class="report-view" id="requirements" data-page="requirements" aria-labelledby="requirements-title">
+      <header>
+        <p class="eyebrow">Industry capability baseline</p>
+        <h1 id="requirements-title" tabindex="-1">Booking and clinic-management requirements</h1>
+        <p class="subtitle">All 58 supplied capabilities compared with Watson’s repository implementation on 21 October 2026. This is a target requirements register and gap analysis, not a claim of live service health or a commitment to one release.</p>
+      </header>
+
+      <section class="stats" aria-label="Industry requirements summary">
+        <div class="stat"><strong>58</strong><span>Total baseline requirements assessed</span></div>
+        <div class="stat"><strong>10</strong><span>Covered by an implementation-backed path</span></div>
+        <div class="stat"><strong>14</strong><span>Partially covered or materially constrained</span></div>
+        <div class="stat"><strong>33</strong><span>Not covered in the current codebase</span></div>
+        <div class="stat"><strong>1</strong><span>Blocked: GDPR readiness cannot yet be claimed</span></div>
+      </section>
+
+      <aside class="scope-banner" aria-labelledby="requirements-scope">
+        <strong id="requirements-scope">Source coverage is not production readiness</strong>
+        “Covered” means the named user outcome has a repository implementation. It does not prove current provider connectivity, uptime, regulatory approval, or safe real-patient use. Email and SMS are explicitly outside the current MVP specification; analytics are prohibited on clinical pages. Adding them requires a product and architecture decision.
+      </aside>
+
+      <section aria-labelledby="section-status-heading">
+        <h2 id="section-status-heading">Status by section</h2>
+        <div class="coverage-grid">
+          <article class="coverage-card">
+            <div class="coverage-card__head"><h3>A · Patient booking</h3><span class="requirement-status requirement-status--partial">Partial</span></div>
+            <p>Public booking and live slot checks work. Approval, service types, recurrence, groups, embeds, Facebook and waitlists do not.</p>
+            <div class="coverage-counts"><span>3 covered</span><span>3 partial</span><span>7 missing</span></div>
+          </article>
+          <article class="coverage-card">
+            <div class="coverage-card__head"><h3>B · Clinic management</h3><span class="requirement-status requirement-status--partial">Partial</span></div>
+            <p>Strong solo-practitioner calendar. No shared clinic hierarchy, staff roles or room allocation.</p>
+            <div class="coverage-counts"><span>4 covered</span><span>5 partial</span><span>3 missing</span></div>
+          </article>
+          <article class="coverage-card">
+            <div class="coverage-card__head"><h3>C · Communications</h3><span class="requirement-status requirement-status--missing">Not covered</span></div>
+            <p>WhatsApp reminders are adjacent capability, but no supplied email, SMS, feedback or marketing requirement is met.</p>
+            <div class="coverage-counts"><span>0 covered</span><span>0 partial</span><span>10 missing</span></div>
+          </article>
+          <article class="coverage-card">
+            <div class="coverage-card__head"><h3>D · Patient data</h3><span class="requirement-status requirement-status--partial">Partial</span></div>
+            <p>Contact records exist. Patient operations, labels, imports, restrictions, exports and reporting remain immature.</p>
+            <div class="coverage-counts"><span>1 covered</span><span>2 partial</span><span>5 missing</span></div>
+          </article>
+          <article class="coverage-card">
+            <div class="coverage-card__head"><h3>E · Payments</h3><span class="requirement-status requirement-status--partial">Partial</span></div>
+            <p>Stripe matching works in test mode. Deposits, QR payments, discounts, vouchers and add-ons are incomplete or absent.</p>
+            <div class="coverage-counts"><span>1 covered</span><span>2 partial</span><span>4 missing</span></div>
+          </article>
+          <article class="coverage-card">
+            <div class="coverage-card__head"><h3>F · Integrations &amp; security</h3><span class="requirement-status requirement-status--blocked">Blocked</span></div>
+            <p>Google Calendar exists. GDPR readiness remains blocked; ADAM, partner API, GTM and secure embedding are absent.</p>
+            <div class="coverage-counts"><span>1 covered</span><span>2 partial</span><span>4 missing</span><span>1 blocked</span></div>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="requirements-matrix-heading">
+        <h2 id="requirements-matrix-heading">Requirement-by-requirement comparison</h2>
+        <div class="controls" aria-label="Requirements filters">
+          <label>Section
+            <select id="requirement-section-filter">
+              <option value="all">All sections</option><option value="A">A · Patient booking</option><option value="B">B · Clinic management</option><option value="C">C · Communications</option><option value="D">D · Patient data</option><option value="E">E · Payments</option><option value="F">F · Integrations &amp; security</option>
+            </select>
+          </label>
+          <label>Status
+            <select id="requirement-status-filter">
+              <option value="all">All statuses</option><option value="covered">Covered</option><option value="partial">Partial</option><option value="missing">Not covered</option><option value="blocked">Blocked</option>
+            </select>
+          </label>
+          <label>Search
+            <input id="requirement-search-filter" type="search" placeholder="Feature, requirement, evidence…">
+          </label>
+        </div>
+        <p id="requirement-result-count" class="count" aria-live="polite"></p>
+        <div class="table-wrap">
+          <table id="requirements-table">
+            <caption>Industry-standard booking capability requirements and current Watson source coverage</caption>
+            <thead><tr><th scope="col">ID</th><th scope="col">Required capability</th><th scope="col">Status</th><th scope="col">Current evidence or gap</th></tr></thead>
+            <tbody>
+              <tr data-section="A" data-status="covered"><th scope="row">ISB-A01</th><td>24/7 online booking</td><td><span class="requirement-status requirement-status--covered">Covered</span></td><td>Public <code>/book/</code> flow; anonymous booking RPCs. Current uptime is unverified.</td></tr>
+              <tr data-section="A" data-status="covered"><th scope="row">ISB-A02</th><td>Real-time availability</td><td><span class="requirement-status requirement-status--covered">Covered</span></td><td>Open slots subtract consultations and Google busy time; booking locks and rechecks the slot.</td></tr>
+              <tr data-section="A" data-status="covered"><th scope="row">ISB-A03</th><td>Instant confirmation</td><td><span class="requirement-status requirement-status--covered">Covered</span></td><td>Free bookings create immediately; paid bookings confirm automatically after verified Stripe fulfilment.</td></tr>
+              <tr data-section="A" data-status="missing"><th scope="row">ISB-A04</th><td>Manual approval before confirmation</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No requested/pending/approved appointment state or staff approval queue.</td></tr>
+              <tr data-section="A" data-status="missing"><th scope="row">ISB-A05</th><td>Multiple appointment types</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>One offer, duration, gap and fee per practitioner; no service catalog.</td></tr>
+              <tr data-section="A" data-status="partial"><th scope="row">ISB-A06</th><td>Custom appointment duration and buffers</td><td><span class="requirement-status requirement-status--partial">Partial</span></td><td>One duration and gap per practitioner, limited to fixed choices; no per-service rules.</td></tr>
+              <tr data-section="A" data-status="missing"><th scope="row">ISB-A07</th><td>Recurring appointments</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No recurrence model, appointment series or repeat-booking flow.</td></tr>
+              <tr data-section="A" data-status="missing"><th scope="row">ISB-A08</th><td>Group appointments</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>Each consultation links to one patient; no capacity or attendee list.</td></tr>
+              <tr data-section="A" data-status="missing"><th scope="row">ISB-A09</th><td>Website iframe integration</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>A shareable link exists; no iframe mode, embed contract or frame-security policy.</td></tr>
+              <tr data-section="A" data-status="missing"><th scope="row">ISB-A10</th><td>Facebook booking</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No Facebook booking entry point or integration.</td></tr>
+              <tr data-section="A" data-status="partial"><th scope="row">ISB-A11</th><td>Custom booking form and branding</td><td><span class="requirement-status requirement-status--partial">Partial</span></td><td>Name, offer, about and languages are configurable; colours, branding and patient questions are fixed.</td></tr>
+              <tr data-section="A" data-status="partial"><th scope="row">ISB-A12</th><td>Multilingual booking</td><td><span class="requirement-status requirement-status--partial">Partial</span></td><td>EN/DE/SK consultation choices and WhatsApp wording exist; booking UI remains English and catalogs are not runtime-integrated.</td></tr>
+              <tr data-section="A" data-status="missing"><th scope="row">ISB-A13</th><td>Waitlist</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No waitlist, cancellation offer or acceptance-expiry workflow.</td></tr>
+
+              <tr data-section="B" data-status="covered"><th scope="row">ISB-B01</th><td>Centralized scheduler</td><td><span class="requirement-status requirement-status--covered">Covered</span></td><td>Weekly/day calendar shows open, held, booked and Google-busy time.</td></tr>
+              <tr data-section="B" data-status="missing"><th scope="row">ISB-B02</th><td>Multiple doctors</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No clinic, staff membership or shared scheduler; practitioners are isolated accounts.</td></tr>
+              <tr data-section="B" data-status="partial"><th scope="row">ISB-B03</th><td>Colour-coded appointments</td><td><span class="requirement-status requirement-status--partial">Partial</span></td><td>Colours distinguish booking state, not service type or staff member.</td></tr>
+              <tr data-section="B" data-status="partial"><th scope="row">ISB-B04</th><td>Staff working hours and shifts</td><td><span class="requirement-status requirement-status--partial">Partial</span></td><td>Each practitioner edits their own weekly hours; no clinic administrator or shift model.</td></tr>
+              <tr data-section="B" data-status="partial"><th scope="row">ISB-B05</th><td>Breaks and holidays</td><td><span class="requirement-status requirement-status--partial">Partial</span></td><td>Closed weekdays and Google busy periods block slots; no native exception/holiday editor.</td></tr>
+              <tr data-section="B" data-status="missing"><th scope="row">ISB-B06</th><td>Room management</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No shared room/resource model or overlap prevention.</td></tr>
+              <tr data-section="B" data-status="missing"><th scope="row">ISB-B07</th><td>Employee roles</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No receptionist, clinician, manager or clinic-admin permissions.</td></tr>
+              <tr data-section="B" data-status="covered"><th scope="row">ISB-B08</th><td>Google Calendar sync</td><td><span class="requirement-status requirement-status--covered">Covered</span></td><td>Reads free/busy and writes Watson bookings to a dedicated calendar. Live connectivity unverified; SEC-05 open.</td></tr>
+              <tr data-section="B" data-status="covered"><th scope="row">ISB-B09</th><td>Mobile-friendly access</td><td><span class="requirement-status requirement-status--covered">Covered</span></td><td>Responsive booking/calendar layouts include a narrow day agenda.</td></tr>
+              <tr data-section="B" data-status="partial"><th scope="row">ISB-B10</th><td>Appointment history</td><td><span class="requirement-status requirement-status--partial">Partial</span></td><td>Consultations persist and are listed, but there is no patient-level history screen.</td></tr>
+              <tr data-section="B" data-status="covered"><th scope="row">ISB-B11</th><td>Manual booking entry</td><td><span class="requirement-status requirement-status--covered">Covered</span></td><td>Practitioner “New consultation” creates a scheduled appointment manually.</td></tr>
+              <tr data-section="B" data-status="partial"><th scope="row">ISB-B12</th><td>Appointment filtering</td><td><span class="requirement-status requirement-status--partial">Partial</span></td><td>Filters cover workflow state, today and recent approvals; no staff/service or arbitrary date range.</td></tr>
+
+              <tr data-section="C" data-status="missing"><th scope="row">ISB-C01</th><td>Email booking confirmation</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No Watson confirmation email; a Stripe receipt is payment evidence, not appointment confirmation.</td></tr>
+              <tr data-section="C" data-status="missing"><th scope="row">ISB-C02</th><td>SMS booking confirmation</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No SMS provider or delivery path.</td></tr>
+              <tr data-section="C" data-status="missing"><th scope="row">ISB-C03</th><td>Email reminders</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>Resend only sends owner operational alerts, not patient reminders.</td></tr>
+              <tr data-section="C" data-status="missing"><th scope="row">ISB-C04</th><td>SMS reminders</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>Implemented reminders use WhatsApp, not SMS.</td></tr>
+              <tr data-section="C" data-status="missing"><th scope="row">ISB-C05</th><td>Employee appointment notifications</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No staff alerts for booking creation, change or cancellation.</td></tr>
+              <tr data-section="C" data-status="missing"><th scope="row">ISB-C06</th><td>Custom SMS content</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No SMS templates, provider or consent model.</td></tr>
+              <tr data-section="C" data-status="missing"><th scope="row">ISB-C07</th><td>Patient calendar invitations</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No ICS/iCalendar invitation; Google export is practitioner-side.</td></tr>
+              <tr data-section="C" data-status="missing"><th scope="row">ISB-C08</th><td>Feedback collection</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No survey, rating or feedback entity.</td></tr>
+              <tr data-section="C" data-status="missing"><th scope="row">ISB-C09</th><td>Google review requests</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No review-request workflow or Google Business integration.</td></tr>
+              <tr data-section="C" data-status="missing"><th scope="row">ISB-C10</th><td>Marketing messages</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No campaigns, marketing consent, preferences or unsubscribe handling.</td></tr>
+
+              <tr data-section="D" data-status="covered"><th scope="row">ISB-D01</th><td>Patient contact database</td><td><span class="requirement-status requirement-status--covered">Covered</span></td><td>Practitioner-scoped patient records store normalized phone/email and link consultations. SEC-02 blocks real-patient use.</td></tr>
+              <tr data-section="D" data-status="partial"><th scope="row">ISB-D02</th><td>Patient appointment history</td><td><span class="requirement-status requirement-status--partial">Partial</span></td><td>Data relationships exist; no dedicated patient profile or history UI.</td></tr>
+              <tr data-section="D" data-status="missing"><th scope="row">ISB-D03</th><td>Patient categorization</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No tag, label or category model.</td></tr>
+              <tr data-section="D" data-status="missing"><th scope="row">ISB-D04</th><td>Customer import</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No import schema, mapping, batch process or audit report.</td></tr>
+              <tr data-section="D" data-status="missing"><th scope="row">ISB-D05</th><td>Blacklist</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No patient restriction state, reason or review control.</td></tr>
+              <tr data-section="D" data-status="partial"><th scope="row">ISB-D06</th><td>Booking and service analytics</td><td><span class="requirement-status requirement-status--partial">Partial</span></td><td>Dashboard has operational counts; no durable analytics or utilization reporting.</td></tr>
+              <tr data-section="D" data-status="missing"><th scope="row">ISB-D07</th><td>Staff analytics</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No clinic staff model or staff-utilization reports.</td></tr>
+              <tr data-section="D" data-status="missing"><th scope="row">ISB-D08</th><td>Appointment and customer exports</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No documented appointment/customer export with authorization and audit controls.</td></tr>
+
+              <tr data-section="E" data-status="partial"><th scope="row">ISB-E01</th><td>Online payments</td><td><span class="requirement-status requirement-status--partial">Partial</span></td><td>Stripe Checkout works in test mode; production onboarding, refunds and operations remain.</td></tr>
+              <tr data-section="E" data-status="partial"><th scope="row">ISB-E02</th><td>Advance deposits or prepayment</td><td><span class="requirement-status requirement-status--partial">Partial</span></td><td>Full-fee hold/prepayment exists; no partial deposit and SEC-03 permits signaling-layer bypass.</td></tr>
+              <tr data-section="E" data-status="missing"><th scope="row">ISB-E03</th><td>QR payments at venue</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No venue QR payment or reconciliation flow. Gateway QR pairing is unrelated.</td></tr>
+              <tr data-section="E" data-status="covered"><th scope="row">ISB-E04</th><td>Payment matching</td><td><span class="requirement-status requirement-status--covered">Covered</span></td><td>Stripe metadata links consultation; amount is verified and fulfilment is idempotent.</td></tr>
+              <tr data-section="E" data-status="missing"><th scope="row">ISB-E05</th><td>Discount codes</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No promotion, code or discount-rule model.</td></tr>
+              <tr data-section="E" data-status="missing"><th scope="row">ISB-E06</th><td>Gift vouchers</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No voucher purchase, balance or redemption flow.</td></tr>
+              <tr data-section="E" data-status="missing"><th scope="row">ISB-E07</th><td>Add-on services</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No service catalog, add-on selection or line-item pricing.</td></tr>
+
+              <tr data-section="F" data-status="missing"><th scope="row">ISB-F01</th><td>ADAM integration</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No ADAM connector or data contract; target product/API still requires clarification.</td></tr>
+              <tr data-section="F" data-status="missing"><th scope="row">ISB-F02</th><td>External API access</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>Internal RPCs are not a documented/versioned partner API with scopes, quotas and lifecycle policy.</td></tr>
+              <tr data-section="F" data-status="covered"><th scope="row">ISB-F03</th><td>Google Calendar integration</td><td><span class="requirement-status requirement-status--covered">Covered</span></td><td>Free/busy reads and dedicated-calendar writes exist; live state unverified and SEC-05 open.</td></tr>
+              <tr data-section="F" data-status="missing"><th scope="row">ISB-F04</th><td>Google Tag Manager</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>No GTM integration; current policy prohibits analytics on clinical pages.</td></tr>
+              <tr data-section="F" data-status="missing"><th scope="row">ISB-F05</th><td>Secure website embed</td><td><span class="requirement-status requirement-status--missing">Not covered</span></td><td>Booking links exist; iframe mode, origin policy and embed versioning do not.</td></tr>
+              <tr data-section="F" data-status="blocked"><th scope="row">ISB-F06</th><td>GDPR support and readiness</td><td><span class="requirement-status requirement-status--blocked">Blocked</span></td><td>Six security findings plus legal, vendor, rights, retention and deletion work prevent a readiness claim.</td></tr>
+              <tr data-section="F" data-status="partial"><th scope="row">ISB-F07</th><td>Secure archiving and backups</td><td><span class="requirement-status requirement-status--partial">Partial</span></td><td>Stored records/files and audit events exist; restoration, retention, immutability and secure deletion are unproven.</td></tr>
+              <tr data-section="F" data-status="partial"><th scope="row">ISB-F08</th><td>Access permissions</td><td><span class="requirement-status requirement-status--partial">Partial</span></td><td>Practitioner RLS and engine identity exist; no clinic/staff RBAC, MFA, offboarding or privileged review.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section aria-labelledby="contract-heading">
+        <h2 id="contract-heading">Cross-cutting acceptance contract</h2>
+        <div class="contract-list">
+          <div class="contract-item"><strong>Booking consistency</strong><span>Recheck availability in the reservation transaction; make retries idempotent.</span></div>
+          <div class="contract-item"><strong>Identity safety</strong><span>Never merge or disclose a patient from unverified contact data.</span></div>
+          <div class="contract-item"><strong>Server-side admission</strong><span>Enforce payment, consent, cancellation and authorization at join/signaling boundaries.</span></div>
+          <div class="contract-item"><strong>Clinic tenancy</strong><span>Model clinic, location, staff, service and room ownership before shared scheduling.</span></div>
+          <div class="contract-item"><strong>Communications</strong><span>Record purpose, locale, consent, template, delivery, retry and opt-out state.</span></div>
+          <div class="contract-item"><strong>Payments</strong><span>Verify amount, currency, reservation, refunds and provider events; keep card data with provider.</span></div>
+          <div class="contract-item"><strong>Exports and analytics</strong><span>Authorize and audit access; exclude clinical data unless separately approved.</span></div>
+          <div class="contract-item"><strong>External integrations</strong><span>Use scoped credentials, replay protection, rate limits, idempotency and recovery.</span></div>
+          <div class="contract-item"><strong>Compliance claims</strong><span>Require technical evidence plus legal, organizational and vendor approval.</span></div>
+        </div>
+      </section>
+
+      <section aria-labelledby="requirements-source-heading">
+        <h2 id="requirements-source-heading">Source-controlled requirement register</h2>
+        <p>Normative requirement wording, status definitions, section totals, product decisions, evidence paths and implementation invariants are maintained in <a href="industry-standard-booking-requirements.md"><code>docs/industry-standard-booking-requirements.md</code></a>. Current phase and slice status remains on the <a href="#roadmap">roadmap page</a>.</p>
+        <div class="risk-callout">
+          <h3>Immediate interpretation</h3>
+          <p>Watson covers the narrow solo-practitioner booking path. It does not yet cover clinic administration or patient communications at industry-suite breadth, and it must not claim GDPR or real-patient readiness while Gate R and the six security findings remain open.</p>
+        </div>
+      </section>
+
+      <footer>
+        <p class="limits"><strong>Primary evidence:</strong> booking/payment/calendar migrations, public and practitioner booking pages, dashboard/calendar components, Stripe/Google/WhatsApp functions, localization records, the build specification, and the 18 October security review.</p>
+        <p class="limits"><strong>Limits:</strong> The supplied feature list was treated as the comparison baseline. External vendor marketing claims were not independently verified. No live provider account, hosted configuration, real patient data, or production workflow was exercised.</p>
+      </footer>
+    </section>
+  </main>
+  <script>
+    const reportViews = [...document.querySelectorAll('[data-page]')];
+    const pageLinks = [...document.querySelectorAll('[data-page-link]')];
+    const pageTitles = {
+      inventory: 'Watson Technology and Dependency Audit — 21 October 2026',
+      architecture: 'Watson Architecture and Workflow — 21 October 2026',
+      roadmap: 'Watson Roadmap and Status — 21 October 2026',
+      requirements: 'Watson Industry Booking Requirements — 21 October 2026'
+    };
+    function requestedPage() {
+      if (location.hash === '#architecture') return 'architecture';
+      if (location.hash === '#roadmap') return 'roadmap';
+      if (location.hash === '#requirements') return 'requirements';
+      if (location.hash === '#inventory') return 'inventory';
+      return null;
+    }
+    function showPage(name, moveFocus = false) {
+      for (const view of reportViews) view.classList.toggle('is-active', view.dataset.page === name);
+      for (const link of pageLinks) {
+        if (link.dataset.pageLink === name) link.setAttribute('aria-current', 'page');
+        else link.removeAttribute('aria-current');
+      }
+      document.title = pageTitles[name];
+      if (moveFocus) document.querySelector(`#${name} h1`)?.focus({ preventScroll: true });
+    }
+    pageLinks.forEach((link) => link.addEventListener('click', () => {
+      if (link.hash === location.hash || (!location.hash && link.hash === '#inventory')) showPage(link.dataset.pageLink, true);
+    }));
+    window.addEventListener('hashchange', () => {
+      const page = requestedPage();
+      if (page) showPage(page, true);
+    });
+    showPage(requestedPage() ?? 'inventory');
+
+    const rows = [...document.querySelectorAll('#inventory-table tbody tr')];
+    const layer = document.querySelector('#layer-filter');
+    const search = document.querySelector('#search-filter');
+    const affected = document.querySelector('#affected-filter');
+    const count = document.querySelector('#result-count');
+    const affectedRisks = new Set(['critical', 'high', 'moderate']);
+    function filterRows() {
+      const query = search.value.trim().toLocaleLowerCase();
+      let visible = 0;
+      for (const row of rows) {
+        const matchesLayer = layer.value === 'all' || row.dataset.layer === layer.value;
+        const matchesRisk = !affected.checked || affectedRisks.has(row.dataset.risk);
+        const matchesSearch = !query || row.textContent.toLocaleLowerCase().includes(query);
+        const show = matchesLayer && matchesRisk && matchesSearch;
+        row.classList.toggle('hidden', !show);
+        if (show) visible += 1;
+      }
+      count.textContent = `Showing ${visible} of ${rows.length} inventory rows`;
+    }
+    layer.addEventListener('change', filterRows);
+    search.addEventListener('input', filterRows);
+    affected.addEventListener('change', filterRows);
+    filterRows();
+
+    const requirementRows = [...document.querySelectorAll('#requirements-table tbody tr')];
+    const requirementSection = document.querySelector('#requirement-section-filter');
+    const requirementStatus = document.querySelector('#requirement-status-filter');
+    const requirementSearch = document.querySelector('#requirement-search-filter');
+    const requirementCount = document.querySelector('#requirement-result-count');
+    function filterRequirements() {
+      const query = requirementSearch.value.trim().toLocaleLowerCase();
+      let visible = 0;
+      for (const row of requirementRows) {
+        const matchesSection = requirementSection.value === 'all' || row.dataset.section === requirementSection.value;
+        const matchesStatus = requirementStatus.value === 'all' || row.dataset.status === requirementStatus.value;
+        const matchesSearch = !query || row.textContent.toLocaleLowerCase().includes(query);
+        const show = matchesSection && matchesStatus && matchesSearch;
+        row.classList.toggle('hidden', !show);
+        if (show) visible += 1;
+      }
+      requirementCount.textContent = `Showing ${visible} of ${requirementRows.length} requirements`;
+    }
+    requirementSection.addEventListener('change', filterRequirements);
+    requirementStatus.addEventListener('change', filterRequirements);
+    requirementSearch.addEventListener('input', filterRequirements);
+    filterRequirements();
+  </script>
+</body>
+</html>
