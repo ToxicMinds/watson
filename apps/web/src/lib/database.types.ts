@@ -1039,6 +1039,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_user_roles: { Args: Record<PropertyKey, never>; Returns: string[] }
       add_document: {
         Args: {
           p_consultation_id: string

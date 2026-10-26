@@ -106,6 +106,16 @@ as $$ select private.has_role('practitioner'); $$;
 revoke all on function private.is_practitioner() from public, anon;
 grant execute on function private.is_practitioner() to authenticated, service_role;
 
+create function public.current_user_roles() returns text[]
+language sql stable security definer set search_path = ''
+as $$
+  select coalesce(array_agg(r.role order by r.role), '{}'::text[])
+  from private.user_roles r
+  where r.user_id = (select auth.uid());
+$$;
+revoke all on function public.current_user_roles() from public, anon, service_role;
+grant execute on function public.current_user_roles() to authenticated;
+
 create function private.assign_role(p_user_id uuid, p_role text) returns void
 language plpgsql security definer set search_path = ''
 as $$

@@ -106,6 +106,8 @@ describe("a patient account", () => {
       delete from private.user_roles where user_id = '${patient.id}' and role = 'practitioner';
       insert into private.user_roles (user_id, role) values ('${patient.id}', 'patient');
     `);
+    expect((await patient.client.rpc("current_user_roles")).data).toEqual(["patient"]);
+    expect((await anna.client.rpc("current_user_roles")).data).toEqual(["practitioner"]);
     const ownConsultation = sqlAsOwner(`
       with inserted as (
         insert into public.consultations (practitioner_id, synthetic_patient_ref, scheduled_at, language, status)
