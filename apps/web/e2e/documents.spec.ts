@@ -39,7 +39,8 @@ test("a patient sends a document from their link, and the practitioner sees it",
   await expect(panel.getByRole("button", { name: "Open lab-report-sk.jpg" })).toBeVisible();
 
   await sent.getByRole("button", { name: "Remove lab-report-sk.jpg" }).click();
-  await expect(sent).toHaveCount(0);
+  await expect(sent.getByText("Removal pending")).toBeVisible();
+  await expect(sent.getByRole("button", { name: "Retry removal of lab-report-sk.jpg" })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("region", { name: "Documents" }).getByText("lab-report-sk.jpg")).toHaveCount(0);
   await patient.close();
