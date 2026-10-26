@@ -102,11 +102,18 @@ describe("a signed-out visitor", () => {
 describe("a patient account", () => {
   it("cannot call practitioner functions, even when it owns a practitioner record", async () => {
     const patient = await newPractitioner(stack, "patient-role");
-    const ownConsultation = sqlAsOwner(`
-      insert into public.consultations (practitioner_id, synthetic_patient_ref, scheduled_at, language, status)
-      values ('${patient.id}', 'SYN-900001', now() + interval '1 day', 'en', 'consent_pending')
-      returning id;
+    sqlAsOwner(`
+      delete from private.user_roles where user_id = '${patient.id}' and role = 'practitioner';
+      insert into private.user_roles (user_id, role) values ('${patient.id}', 'patient');
     `);
+    const ownConsultation = sqlAsOwner(`
+      with inserted as (
+        insert into public.consultations (practitioner_id, synthetic_patient_ref, scheduled_at, language, status)
+        values ('${patient.id}', 'SYN-900001', now() + interval '1 day', 'en', 'consent_pending')
+        returning id
+      ) select id from inserted;
+    `);
+    expect((await patient.client.from("consultations").select("id")).data).toEqual([]);
 
     const answer = await rpc(patient.client, "create_consultation", {
       p_synthetic_patient_ref: "SYN-900002",
@@ -117,6 +124,17 @@ describe("a patient account", () => {
     expect(answer).toMatchObject({ ok: false, error_category: "NOT_A_PRACTITIONER" });
     expect(await rpc(patient.client, "record_consent", { p_consultation_id: ownConsultation }))
       .toMatchObject({ ok: false, error_category: "NOT_A_PRACTITIONER" });
+    const pageWrite = await patient.client.rpc("save_booking_page" as never, {
+      p_display_name: "Patient acting as practitioner",
+      p_offer: "",
+      p_about: "",
+      p_languages: ["en"],
+      p_hours: { "1": ["09:00", "12:00"] },
+      p_length_minutes: 45,
+      p_gap_minutes: 15,
+      p_fee_cents: 4000,
+    } as never);
+    expect(pageWrite.error?.code).toBe("42501");
   });
 });
 

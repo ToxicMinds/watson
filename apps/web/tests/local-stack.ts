@@ -38,6 +38,7 @@ export async function newPractitioner(stack: Stack, label: string) {
   const email = `${label}-${randomUUID().slice(0, 8)}@watson.test`;
   const created = await adminClient(stack).auth.admin.createUser({ email, password: PASSWORD, email_confirm: true });
   if (created.error) throw created.error;
+  sqlAsOwner(`insert into private.user_roles (user_id, role) values ('${created.data.user.id}', 'practitioner');`);
   const client = browserClient(stack);
   const { error } = await client.auth.signInWithPassword({ email, password: PASSWORD });
   if (error) throw error;
@@ -60,6 +61,7 @@ export async function rpc(client: Practitioner["client"], name: string, args: ob
 /** A new account registered as an engine, the way the laptop's engine is. */
 export async function newEngine(stack: Stack, label: string) {
   const who = await newPractitioner(stack, label);
+  sqlAsOwner(`delete from private.user_roles where user_id = '${who.id}' and role = 'practitioner';`);
   const { error } = await adminClient(stack).rpc("register_engine", { p_user_id: who.id, p_label: label });
   if (error) throw error;
   return who;
