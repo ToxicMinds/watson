@@ -3,7 +3,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   adminClient, attachTrack, browserClient, createConsultation, FIXTURE_WAV, localStack,
-  newPractitioner, PASSWORD, rpc, type Practitioner,
+  newPractitioner, PASSWORD, rpc, sqlAsOwner, type Practitioner,
 } from "./local-stack";
 
 const stack = localStack();
@@ -96,6 +96,27 @@ describe("a signed-out visitor", () => {
   it("is refused with a wrong password", async () => {
     const { error } = await visitor.auth.signInWithPassword({ email: anna.email, password: "wrong-password-123" });
     expect(error?.status).toBe(400);
+  });
+});
+
+describe("a patient account", () => {
+  it("cannot call practitioner functions, even when it owns a practitioner record", async () => {
+    const patient = await newPractitioner(stack, "patient-role");
+    const ownConsultation = sqlAsOwner(`
+      insert into public.consultations (practitioner_id, synthetic_patient_ref, scheduled_at, language, status)
+      values ('${patient.id}', 'SYN-900001', now() + interval '1 day', 'en', 'consent_pending')
+      returning id;
+    `);
+
+    const answer = await rpc(patient.client, "create_consultation", {
+      p_synthetic_patient_ref: "SYN-900002",
+      p_scheduled_at: "2026-10-05T08:30:00Z",
+      p_language: "en",
+      p_consent_recorded: true,
+    });
+    expect(answer).toMatchObject({ ok: false, error_category: "NOT_A_PRACTITIONER" });
+    expect(await rpc(patient.client, "record_consent", { p_consultation_id: ownConsultation }))
+      .toMatchObject({ ok: false, error_category: "NOT_A_PRACTITIONER" });
   });
 });
 
