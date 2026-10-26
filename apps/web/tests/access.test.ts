@@ -141,6 +141,15 @@ describe("a patient account", () => {
 describe("the engine credential", () => {
   const engine = adminClient(stack);
 
+  it("cannot be registered on an account with practitioner role", async () => {
+    const practitioner = await newPractitioner(stack, "engine-role-conflict");
+    const attempt = await engine.rpc("register_engine", {
+      p_user_id: practitioner.id,
+      p_label: "must-not-overlap",
+    });
+    expect(attempt.error).not.toBeNull();
+  });
+
   it("can read, but cannot change tables directly", async () => {
     expect((await engine.from("consultations").select("id").eq("id", annas)).data).toHaveLength(1);
     expect((await engine.from("consultations").update({ status: "approved" }).eq("id", annas)).error).not.toBeNull();

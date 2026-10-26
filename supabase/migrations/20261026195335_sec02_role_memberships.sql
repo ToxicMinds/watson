@@ -56,6 +56,9 @@ create trigger practitioner_profiles_require_practitioner_owner
 create trigger form_templates_require_practitioner_owner
   before insert or update or delete on public.form_templates
   for each row execute function private.require_practitioner_owner();
+create trigger spellings_require_practitioner_owner
+  before insert or update or delete on public.spellings
+  for each row execute function private.require_practitioner_owner();
 
 -- Existing accounts are classified only from authoritative records. Unclassified
 -- accounts receive no practitioner role and therefore fail closed.
@@ -151,6 +154,11 @@ create policy "Practitioners read their own form template"
 drop policy "Practitioners read their patients' documents" on public.patient_documents;
 create policy "Practitioners read their patients' documents"
   on public.patient_documents for select to authenticated
+  using (private.is_practitioner() and practitioner_id = (select auth.uid()));
+
+drop policy "Practitioners read the spellings they taught" on public.spellings;
+create policy "Practitioners read the spellings they taught"
+  on public.spellings for select to authenticated
   using (private.is_practitioner() and practitioner_id = (select auth.uid()));
 
 create or replace function private.document_access(p_object_name text, p_action text) returns boolean
