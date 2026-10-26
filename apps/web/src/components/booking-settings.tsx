@@ -16,6 +16,9 @@ import { LANGUAGE_LABEL, type ConsultationLanguage } from "@/lib/status";
 
 const LANGUAGES: ConsultationLanguage[] = ["en", "sk", "de"];
 const DEFAULT_SPAN: [string, string] = ["09:00", "17:00"];
+const activeHours = (hours: Hours): Hours => Object.fromEntries(
+  Object.entries(hours).filter(([, span]) => span).sort(([left], [right]) => Number(left) - Number(right)),
+);
 
 /** What each refused field should say. */
 const FIELD: Record<string, string> = {
@@ -30,6 +33,7 @@ export function BookingSettings({ page, aside, quietSave, onSaved }: {
   page: OwnPage | null; aside?: ReactNode; quietSave?: boolean; onSaved: () => void;
 }) {
   const [hours, setHours] = useState<Hours>(page?.hours ?? {});
+  const [savedHours, setSavedHours] = useState<Hours>(() => activeHours(page?.hours ?? {}));
   const [length, setLength] = useState(page?.length_minutes ?? 45);
   const [gap, setGap] = useState(page?.gap_minutes ?? 15);
   const [fee, setFee] = useState(fromCents(page?.fee_cents ?? null));
@@ -40,8 +44,13 @@ export function BookingSettings({ page, aside, quietSave, onSaved }: {
   const [state, setState] = useState<"idle" | "saving" | "saved">("idle");
   const [problem, setProblem] = useState<{ field?: string; message: string } | null>(null);
   const link = page ? `${typeof window === "undefined" ? "" : window.location.origin}/book/?p=${page.slug}` : null;
+  const hoursToSave = activeHours(hours);
+  const hoursChanged = JSON.stringify(hoursToSave) !== JSON.stringify(activeHours(savedHours));
 
-  const setDay = (day: string, span: [string, string] | undefined) => setHours((now) => ({ ...now, [day]: span }));
+  const setDay = (day: string, span: [string, string] | undefined) => {
+    setState("idle");
+    setHours((now) => ({ ...now, [day]: span }));
+  };
 
   async function save() {
     setProblem(null);
@@ -49,13 +58,14 @@ export function BookingSettings({ page, aside, quietSave, onSaved }: {
     setState("saving");
     const outcome = await call<{ slug: string }>("save_booking_page", {
       p_display_name: name, p_offer: offer, p_about: about, p_languages: languages,
-      p_hours: Object.fromEntries(Object.entries(hours).filter(([, span]) => span)),
+      p_hours: hoursToSave,
       p_length_minutes: length, p_gap_minutes: gap, p_fee_cents: toCents(fee) as number,
     });
     if (!outcome.ok) {
       setState("idle");
       return setProblem({ field: outcome.field, message: (outcome.field && FIELD[outcome.field]) ?? explain(outcome.error_category) });
     }
+    setSavedHours(hoursToSave);
     setState("saved");
     onSaved();
   }
@@ -66,6 +76,11 @@ export function BookingSettings({ page, aside, quietSave, onSaved }: {
       <div className="wa-split">
         <section className="wa-panel" aria-labelledby="hours">
           <div className="wa-panel__head"><h2 className="wa-heading" id="hours">Hours patients can book</h2></div>
+          {hoursChanged && <Notice tone="attention" title="Hours changed but not saved">
+            {page
+              ? "Patients can still book during your previously saved hours until you save these changes."
+              : "Patients cannot book until you save your booking page."}
+          </Notice>}
           <ul className="wa-hours">
             {WEEKDAYS.map((weekday, i) => {
               const day = String(i + 1);
