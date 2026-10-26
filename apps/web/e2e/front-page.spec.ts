@@ -39,6 +39,20 @@ test("a practitioner's booking page carries their name in the browser tab and in
   await expect(page).toHaveTitle("Dr. Tab Title · Watson");
 });
 
+test("a direct booking link with no saved hours shows no dates or times", async ({ page }) => {
+  const who = await newPractitioner(localStack(), "closed-booking-page");
+  const saved = await rpc(who.client, "save_booking_page", {
+    p_display_name: "Dr. Closed Schedule", p_offer: "", p_about: "", p_languages: ["en"],
+    p_hours: {}, p_length_minutes: 45, p_gap_minutes: 15, p_fee_cents: null,
+  });
+
+  await page.goto(`/book/?p=${saved.slug}`);
+  await expect(page.getByRole("heading", { name: "Dr. Closed Schedule", level: 1 })).toBeVisible();
+  await expect(page.getByText("No free times in the next 4 weeks.")).toBeVisible();
+  await expect(page.getByRole("list", { name: "Days" })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: /Times on/ })).toHaveCount(0);
+});
+
 test("pages load without anything refused by the security policy (Chrome shows each refusal as an error)", async ({ page, account }) => {
   const refused: string[] = [];
   await page.exposeFunction("reportRefused", (what: string) => refused.push(what));

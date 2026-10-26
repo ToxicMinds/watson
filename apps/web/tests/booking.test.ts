@@ -79,6 +79,20 @@ describe("a practitioner's booking page", () => {
 });
 
 describe("open times", () => {
+  it("offers no times and rejects stale slots after the doctor closes all days", async () => {
+    const who = await newPractitioner(stack, "closed-direct");
+    const slug = await openPage(who);
+    const previouslyOpen = await rpc(patient, "booking_times", { p_slug: slug, p_from: from, p_to: to });
+    const staleSlot = (previouslyOpen.times as string[])[0];
+    expect(staleSlot).toBeDefined();
+
+    await openPage(who, { p_hours: {} });
+    const closed = await rpc(patient, "booking_times", { p_slug: slug, p_from: from, p_to: to });
+    expect(closed).toMatchObject({ ok: true, times: [] });
+    expect(await rpc(patient, "book_time", booking(slug, staleSlot)))
+      .toEqual({ ok: false, error_category: "TIME_TAKEN" });
+  });
+
   it("fall on a grid of consultation length plus the time between, inside the hours, on the practitioner's clock", async () => {
     expect(await times(evaSlug)).toEqual([`${MONDAY} 09:00`, `${MONDAY} 10:00`, `${MONDAY} 11:00`]);
   });

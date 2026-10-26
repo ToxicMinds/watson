@@ -1,5 +1,16 @@
 import { expect, signIn, test } from "./account";
 
+test("warns the doctor that changed booking hours are not live until saved", async ({ page, account }) => {
+  await signIn(page, account);
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Practice" }).click();
+  const hours = page.getByRole("region", { name: "Hours patients can book" });
+  const monday = hours.getByLabel("Monday", { exact: true });
+  if (await monday.isChecked()) await monday.uncheck();
+  else await monday.check();
+
+  await expect(page.getByRole("status").filter({ hasText: "Hours changed but not saved" })).toBeVisible();
+});
+
 // The whole booking path in two browsers: the practitioner opens hours on their page; a patient
 // with no account finds them, books a time and lands on their link; the booking reaches Home.
 // The page is free, so no payment step (Stripe's page cannot run against the local stack).
