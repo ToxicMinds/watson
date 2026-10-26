@@ -115,7 +115,7 @@ function Choose({ offer }: { offer: Offer }) {
               <span className="wa-meta">Times in your time zone ({zoneName(zone)})</span>
             </div>
             {times.length === 0 ? (
-              <p className="wa-text">No free times in the next {WEEKS_AHEAD} weeks. Try again in a few days.</p>
+              <p className="wa-text">{page.display_name} is not taking appointments at the moment.</p>
             ) : (
               <>
                 <ul className="wa-days" aria-label="Days">
