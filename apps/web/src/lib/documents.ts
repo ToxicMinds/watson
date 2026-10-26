@@ -27,16 +27,23 @@ export async function sendDocument(
   return confirmed.ok ? null : explain(confirmed.error_category);
 }
 
-/** Opens a document in a new tab, through a link that works for one minute. */
+/** Downloads through the caller's current Storage authorization, then opens a local blob URL. */
 export async function openDocument(path: string): Promise<boolean> {
   const opened = window.open("", "_blank");
-  const { data } = await supabase.storage.from("documents").createSignedUrl(path, 60);
-  if (!data?.signedUrl) {
+  let data: Blob | null;
+  try {
+    const result = await supabase.storage.from("documents").download(path);
+    data = result.error ? null : result.data;
+  } catch {
+    data = null;
+  }
+  if (!data) {
     opened?.close();
     return false;
   }
-  if (opened) opened.location.href = data.signedUrl;
-  else window.location.assign(data.signedUrl);
+  const objectUrl = URL.createObjectURL(data);
+  if (opened) opened.location.href = objectUrl;
+  else window.location.assign(objectUrl);
   return true;
 }
 

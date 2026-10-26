@@ -417,6 +417,9 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 [functions.payment]
 verify_jwt = false
 
+[functions.document-cleanup]
+verify_jwt = false
+
 [functions.stripe-webhook]
 verify_jwt = false
 

@@ -3,15 +3,19 @@ import { adminClient, browserClient, localStack, newPractitioner, PASSWORD, rpc,
 import { expect, signIn, test } from "./account";
 
 const TEMPLATE = readFileSync(new URL("../../../packages/test-fixtures/templates/ayurveda-intake.json", import.meta.url), "utf8");
+const NARROW_TEMPLATE = TEMPLATE.replace(
+  '"label": "Other"',
+  '"label": "Allergies and food intolerances / Alergias e intolerancias alimentarias"',
+);
 
 /** A consultation whose form Watson has just filled in: three answers, the rest not discussed. */
-function filledForm(consultationId: string) {
+function filledForm(consultationId: string, template = TEMPLATE) {
   const answers: Record<string, [string, number[]]> = {
     age: ["42", [1]],
     diet: ["Skips breakfast; three coffees before lunch.", [3]],
     present_conditions: ["Hyperacidity (amla pitta).", [4]],
   };
-  const keys = (JSON.parse(TEMPLATE).sections as { fields: { key: string }[] }[]).flatMap((s) => s.fields.map((f) => f.key));
+  const keys = (JSON.parse(template).sections as { fields: { key: string }[] }[]).flatMap((s) => s.fields.map((f) => f.key));
   const rows = keys.map((key, i) => {
     const [text, evidence] = answers[key] ?? [null, []];
     return `((select id from f), '${key}', ${i}, ${text === null ? "null" : `'${text}'`}, '{${evidence.join(",")}}')`;
@@ -29,8 +33,8 @@ function filledForm(consultationId: string) {
           from t, (values ${lines.map(([who, said], i) => `(${i + 1}, '${who}', '${said.replace(/'/g, "''")}')`).join(", ")}) as x(n, who, said) returning 1),
     fj as (insert into public.form_jobs (consultation_id, transcript_id, status, claimed_at, finished_at)
            select '${consultationId}', id, 'completed', now() - interval '4 minutes', now() from t returning id, transcript_id),
-    f as (insert into public.forms (consultation_id, job_id, transcript_id, template)
-          select '${consultationId}', id, transcript_id, '${TEMPLATE.replace(/'/g, "''")}'::jsonb from fj returning id)
+     f as (insert into public.forms (consultation_id, job_id, transcript_id, template)
+           select '${consultationId}', id, transcript_id, '${template.replace(/'/g, "''")}'::jsonb from fj returning id)
     insert into public.form_answers (form_id, field_key, position, machine_text, evidence) values ${rows.join(", ")};
     update public.consultations set status = 'draft_ready' where id = '${consultationId}';
     with p as (insert into public.patients (practitioner_id, name, phone)
@@ -61,7 +65,7 @@ async function consultation(account: { email: string; password: string }, fee?: 
 test("check every answer of the filled-in form against its quote, then approve it", async ({ page, account, problems }) => {
   test.skip(Boolean(process.env.E2E_BASE_URL), "prepares a filled-in form directly in the local database");
   const { id } = await consultation(account);
-  filledForm(id);
+  filledForm(id, NARROW_TEMPLATE);
 
   await signIn(page, account);
   await page.goto(`/consultation/?id=${id}`);
@@ -74,6 +78,27 @@ test("check every answer of the filled-in form against its quote, then approve i
   await expect(page.getByText("3 of 21 answered")).toBeVisible();
   await expect(page.getByText("3 answers still to check")).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve form" })).toBeDisabled();
+  await expect(page.getByRole("button", {
+    name: "Add an answer: Allergies and food intolerances / Alergias e intolerancias alimentarias",
+  })).toBeVisible();
+
+  // Regression: long bilingual tucked labels must wrap without widening the review sheet or page.
+  const originalViewport = page.viewportSize() ?? { width: 1280, height: 720 };
+  for (const width of [320, 375]) {
+    await page.setViewportSize({ ...originalViewport, width });
+    const dimensions = await page.evaluate(() => {
+      const sheet = document.querySelector<HTMLElement>(".wa-sheet");
+      return {
+        documentWidth: document.documentElement.scrollWidth,
+        viewportWidth: window.innerWidth,
+        sheetClientWidth: sheet?.clientWidth ?? 0,
+        sheetScrollWidth: sheet?.scrollWidth ?? 0,
+      };
+    });
+    expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+    expect(dimensions.sheetScrollWidth).toBeLessThanOrEqual(dimensions.sheetClientWidth);
+  }
+  await page.setViewportSize(originalViewport);
 
   const age = page.getByRole("article", { name: "Age" });
   await expect(age.getByText("I'm forty-two.")).toBeVisible(); // the quote, with its speaker

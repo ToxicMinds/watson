@@ -4,7 +4,7 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
-import { browserClient, claimFormJob, localStack, newEngine, newPractitioner, rpc, sqlAsOwner, transcriptWithFormJob, type Practitioner } from "./local-stack";
+import { adminClient, browserClient, claimFormJob, localStack, newEngine, newPractitioner, rpc, sqlAsOwner, transcriptWithFormJob, type Practitioner } from "./local-stack";
 
 const stack = localStack();
 const PDF = Buffer.from("%PDF-1.4\n% a tiny stand-in for a lab report\n%%EOF\n");
@@ -135,18 +135,56 @@ describe("a document from the patient's page", () => {
     expect(await add("application/pdf", 10485761)).toEqual({ ok: false, error_category: "DOCUMENT_TOO_LARGE" });
   });
 
-  it("can be taken back by the patient from their own link only, and its file deleted", async () => {
+  it("revokes access immediately and retains a tombstone when patient storage cleanup is pending", async () => {
     const { invite_token: token } = await consultation(eva);
     const { invite_token: other } = await consultation(eva);
     const sent = await sendDocument(token);
     expect(await rpc(sent.visitor, "patient_remove_document", { p_token: other, p_document_id: sent.id })).toEqual({ ok: false, error_category: "NOT_FOUND" });
-    expect(await rpc(sent.visitor, "patient_remove_document", { p_token: token, p_document_id: sent.id })).toEqual({ ok: true, path: sent.path });
-    expect((await sent.visitor.storage.from("documents").remove([sent.path])).error).toBeNull();
-    expect(sqlAsOwner(`select count(*) from storage.objects where bucket_id = 'documents' and name = '${sent.path}'`)).toBe("0");
+    expect(await rpc(sent.visitor, "patient_remove_document", { p_token: token, p_document_id: sent.id }))
+      .toMatchObject({ ok: true, path: sent.path, cleanup_completed: false });
+    // Anonymous, unrelated practitioner, and unassigned engine cannot list, read,
+    // sign, or delete while the tombstone holds the path.
+    for (const client of [sent.visitor, finn.client, engine.client]) {
+      expect((await client.storage.from("documents").list(eva.id)).data?.some((o) => o.name === sent.id)).toBe(false);
+      expect((await client.storage.from("documents").download(sent.path)).error).not.toBeNull();
+      expect((await client.storage.from("documents").createSignedUrl(sent.path, 60)).error).not.toBeNull();
+      await client.storage.from("documents").remove([sent.path]);
+    }
+    expect(sqlAsOwner(`select count(*) from storage.objects where bucket_id = 'documents' and name = '${sent.path}'`)).toBe("1");
+    expect(sqlAsOwner(`select removed_at is not null and cleanup_completed_at is null from public.patient_documents where id = '${sent.id}'`)).toBe("t");
+    expect(sqlAsOwner(`select page_texts is null and reading = 'failed' and engine_user_id is null from public.patient_documents where id = '${sent.id}'`)).toBe("t");
+
+    // A trusted service client removes through Storage API and acknowledges cleanup.
+    const admin = adminClient(stack);
+    expect((await sent.visitor.rpc("complete_document_cleanup", { p_document_id: sent.id })).error).not.toBeNull();
+    expect((await admin.storage.from("documents").remove([sent.path])).error).toBeNull();
+    expect(await rpc(admin, "complete_document_cleanup", { p_document_id: sent.id })).toBe(true);
+    expect(sqlAsOwner(`select cleanup_completed_at is not null from public.patient_documents where id = '${sent.id}'`)).toBe("t");
   });
 });
 
 describe("the practitioner", () => {
+  it("does not count removed documents toward the active upload limit", async () => {
+    const { id } = await consultation(eva);
+    await rpc(eva.client, "set_patient", {
+      p_consultation_id: id, p_name: "Jana", p_contact: `+4219${Date.now() % 1e8}`,
+    });
+    const add = () => rpc(eva.client, "add_document", {
+      p_consultation_id: id, p_file_name: "Letter.pdf", p_media_type: "application/pdf", p_size_bytes: PDF.length,
+    });
+    const documents: string[] = [];
+    for (let i = 0; i < 20; i++) {
+      const result = await add();
+      expect(result.ok).toBe(true);
+      documents.push(result.document_id as string);
+    }
+    expect(await add()).toEqual({ ok: false, error_category: "DOCUMENT_LIMIT" });
+
+    expect(await rpc(eva.client, "remove_document", { p_document_id: documents[0] }))
+      .toMatchObject({ ok: true, cleanup_completed: false });
+    expect(await add()).toMatchObject({ ok: true });
+  });
+
   it("can name the patient, add a document and remove any of their patients' documents", async () => {
     const { id } = await consultation(eva);
     expect(await rpc(eva.client, "add_document", { p_consultation_id: id, p_file_name: "Letter.pdf", p_media_type: "application/pdf", p_size_bytes: PDF.length }))
@@ -156,9 +194,30 @@ describe("the practitioner", () => {
     const added = await rpc(eva.client, "add_document", { p_consultation_id: id, p_file_name: "Letter.pdf", p_media_type: "application/pdf", p_size_bytes: PDF.length });
     expect((await eva.client.storage.from("documents").upload(added.path as string, PDF, { contentType: "application/pdf" })).error).toBeNull();
     expect(await rpc(eva.client, "confirm_document", { p_document_id: added.document_id })).toEqual({ ok: true });
+    const assigned = await claim(added.document_id as string);
+    expect((await engine.client.storage.from("documents").download(assigned.storage_path)).error).toBeNull();
     expect(await rpc(finn.client, "remove_document", { p_document_id: added.document_id })).toEqual({ ok: false, error_category: "NOT_FOUND" });
-    expect(await rpc(eva.client, "remove_document", { p_document_id: added.document_id })).toEqual({ ok: true, path: added.path });
-    expect((await eva.client.storage.from("documents").remove([added.path as string])).error).toBeNull();
+    expect(await rpc(eva.client, "remove_document", { p_document_id: added.document_id }))
+      .toMatchObject({ ok: true, path: added.path, cleanup_completed: false });
+    // Tombstones revoke reads even for the original practitioner and an assigned engine.
+    const { error: downloadError } = await eva.client.storage.from("documents").download(added.path as string);
+    expect(downloadError).not.toBeNull();
+    expect((await finn.client.storage.from("documents").download(added.path as string)).error).not.toBeNull();
+    expect((await engine.client.storage.from("documents").download(added.path as string)).error).not.toBeNull();
+    for (const client of [eva.client, finn.client, engine.client]) {
+      expect((await client.storage.from("documents").list(eva.id)).data?.some((o) => o.name === added.document_id)).toBe(false);
+      expect((await client.storage.from("documents").createSignedUrl(added.path as string, 60)).error).not.toBeNull();
+      await client.storage.from("documents").remove([added.path as string]);
+    }
+    expect(sqlAsOwner(`select count(*) from storage.objects where bucket_id = 'documents' and name = '${added.path}'`)).toBe("1");
+    expect(sqlAsOwner(`select removed_at is not null and cleanup_completed_at is null from public.patient_documents where id = '${added.document_id}'`)).toBe("t");
+    expect(sqlAsOwner(`select page_texts is null and reading = 'failed' and engine_user_id is null from public.patient_documents where id = '${added.document_id}'`)).toBe("t");
+    expect(await rpc(eva.client, "read_document_again", { p_document_id: added.document_id }))
+      .toEqual({ ok: false, error_category: "NOT_FOUND" });
+
+    const admin = adminClient(stack);
+    expect((await admin.storage.from("documents").remove([added.path as string])).error).toBeNull();
+    expect(await rpc(admin, "complete_document_cleanup", { p_document_id: added.document_id as string })).toBe(true);
   });
 });
 

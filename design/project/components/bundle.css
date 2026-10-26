@@ -251,10 +251,10 @@ body {
 .wa-livetext__when { margin-left: var(--space-2); font: 400 12px/20px var(--font-mono); color: var(--ink-muted); font-variant-numeric: tabular-nums; }
 
 /* ---------- Form (slice 1.5): the practitioner's form, filled in from the conversation ---------- */
-.wa-sheet { display: grid; gap: var(--space-8); }
-.wa-sheet__section { display: grid; gap: var(--space-3); }
+.wa-sheet { display: grid; gap: var(--space-8); min-width: 0; }
+.wa-sheet__section { display: grid; gap: var(--space-3); min-width: 0; }
 .wa-sheet__title { margin: 0; font: 700 19px/26px var(--font-text); }
-.wa-answer { display: grid; gap: var(--space-3); padding: var(--space-4) var(--space-6); background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius-paper); }
+.wa-answer { display: grid; gap: var(--space-3); min-width: 0; padding: var(--space-4) var(--space-6); background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius-paper); }
 .wa-answer__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
 .wa-answer__label { margin: 0; font: 700 16px/24px var(--font-text); }
 .wa-answer__text { margin: 0; max-width: var(--measure); font: 400 17px/28px var(--font-text); white-space: pre-line; }
@@ -320,12 +320,14 @@ body {
 .wa-suggests__title { margin: 0; font: 700 13px/18px var(--font-text); letter-spacing: 0.08em; text-transform: uppercase; color: var(--lamp); }
 .wa-suggests__text { margin: 0; font: 600 20px/28px var(--font-display); }
 .wa-review { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: var(--space-6); align-items: start; }
+.wa-review > * { min-width: 0; }
 .wa-review__aside { position: sticky; top: var(--space-4); display: grid; gap: var(--space-3); max-height: calc(100vh - 32px); overflow: auto; padding: var(--space-4); border-radius: 10px; background: var(--paper); box-shadow: var(--shadow-raised); }
 .wa-review__aside .wa-turn__text { font-size: 15px; line-height: 22px; }
 .wa-turn--lit .wa-turn__body { border-radius: 6px; background: var(--lamp-tint); }
 .wa-answer--active { box-shadow: 0 0 0 2px var(--practitioner); }
 .wa-sheet .wa-answer:not(.wa-answer--empty) { border-color: transparent; box-shadow: var(--shadow-raised); border-radius: 10px; }
-.wa-tucked { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin: 0; padding: var(--space-3) var(--space-6); border-radius: 10px; background: var(--paper-sunk); font-size: 14px; line-height: 20px; color: var(--ink-muted); }
+.wa-tucked { box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; min-width: 0; gap: var(--space-2) var(--space-3); margin: 0; padding: var(--space-3) var(--space-6); border-radius: 10px; background: var(--paper-sunk); font-size: 14px; line-height: 20px; color: var(--ink-muted); }
+.wa-tucked .wa-button--quiet { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 @media (max-width: 900px) { .wa-review { grid-template-columns: minmax(0, 1fr); } .wa-review__aside { position: static; max-height: none; } }
 /* Sign-in: the front door at night. The sign-in card is the lit page; Watson's notebook shows one
    consultation as Watson keeps it, ending with what waits for the practitioner. */

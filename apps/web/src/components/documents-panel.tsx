@@ -11,12 +11,12 @@ import { supabase } from "@/lib/supabase";
 
 type Patient = Pick<Tables<"patients">, "id" | "name" | "phone" | "email">;
 type Document = Pick<Tables<"patient_documents">,
-  "id" | "consultation_id" | "file_name" | "media_type" | "source" | "uploaded_at" | "reading" | "page_texts" | "storage_path"
+  "id" | "consultation_id" | "file_name" | "media_type" | "source" | "uploaded_at" | "reading" | "page_texts" | "storage_path" | "removed_at" | "cleanup_completed_at"
 > & { consultations: { scheduled_at: string } | null };
 
 async function fetchDocuments(patientId: string): Promise<Document[]> {
   const { data } = await supabase.from("patient_documents")
-    .select("id, consultation_id, file_name, media_type, source, uploaded_at, reading, page_texts, storage_path, consultations(scheduled_at)")
+    .select("id, consultation_id, file_name, media_type, source, uploaded_at, reading, page_texts, storage_path, removed_at, cleanup_completed_at, consultations(scheduled_at)")
     .eq("patient_id", patientId).not("uploaded_at", "is", null).order("uploaded_at", { ascending: false });
   return (data ?? []) as Document[];
 }
@@ -54,7 +54,8 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
   }, [patientId]);
 
   // While Watson is reading something, look again every few seconds.
-  const reading = loaded?.some((document) => document.reading === "waiting" || document.reading === "reading");
+  const reading = loaded?.some((document) => document.removed_at === null
+    && (document.reading === "waiting" || document.reading === "reading"));
   useEffect(() => {
     if (!reading) return;
     const timer = setInterval(load, 4000);
@@ -100,8 +101,12 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
   async function remove(document: Document) {
     setBusy(true);
     const outcome = await call<{ path: string }>("remove_document", { p_document_id: document.id });
-    if (outcome.ok) await supabase.storage.from("documents").remove([outcome.path]);
-    else setProblem(explain(outcome.error_category));
+    if (outcome.ok) {
+      const { data, error } = await supabase.functions.invoke<{ ok: boolean }>("document-cleanup", {
+        body: { document_id: document.id },
+      });
+      if (error || !data?.ok) setProblem("Access was revoked, but storage cleanup is pending. Retry removal.");
+    } else setProblem(explain(outcome.error_category));
     setBusy(false);
     setRemoving(null);
     load();
@@ -119,8 +124,9 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
 
   const error = (field: string) => fieldError?.field === field ? fieldError.message : null;
   const documents = patient ? loaded : [];
-  const fromPatient = documents?.filter((document) => document.source !== "practitioner").length ?? 0;
-  const read = documents?.filter((document) => document.reading === "read").length ?? 0;
+  const activeDocuments = documents?.filter((document) => document.removed_at === null) ?? [];
+  const fromPatient = activeDocuments.filter((document) => document.source !== "practitioner").length;
+  const read = activeDocuments.filter((document) => document.reading === "read").length;
   return (
     <section className="wa-panel" aria-labelledby="documents-title">
       <div className="wa-panel__head">
@@ -186,13 +192,22 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
                 </p>
               </div>
               <div className="wa-doc__end">
-                <Reading document={document} onTryAgain={() => readAgain(document)} />
-                {removing === document.id ? (
+                {document.removed_at ? (
+                  <span className={`wa-chip ${document.cleanup_completed_at ? "wa-chip--done" : "wa-chip--attention"}`}>
+                    {document.cleanup_completed_at ? "Removed" : "Removal pending"}
+                  </span>
+                ) : <Reading document={document} onTryAgain={() => readAgain(document)} />}
+                {document.removed_at && !document.cleanup_completed_at ? (
+                  <button type="button" className="wa-button wa-button--quiet wa-button--small" disabled={busy}
+                    aria-label={`Retry removal of ${document.file_name}`} onClick={() => void remove(document)}>
+                    Retry removal
+                  </button>
+                ) : !document.removed_at && removing === document.id ? (
                   <>
                     <button type="button" className="wa-button wa-button--danger wa-button--small" disabled={busy} onClick={() => remove(document)}>Remove for good</button>
                     <button type="button" className="wa-button wa-button--quiet wa-button--small" onClick={() => setRemoving(null)}>Keep</button>
                   </>
-                ) : (
+                ) : !document.removed_at ? (
                   <>
                     <button type="button" className="wa-button wa-button--secondary wa-button--small" aria-label={`Open ${document.file_name}`}
                       onClick={() => open(document)}>
@@ -203,7 +218,7 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
                       Remove
                     </button>
                   </>
-                )}
+                ) : null}
               </div>
             </li>
           ))}

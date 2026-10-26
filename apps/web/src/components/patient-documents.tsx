@@ -8,7 +8,10 @@ import { DOCUMENT_ACCEPT, fileSize, sendDocument } from "@/lib/documents";
 import { supabase } from "@/lib/supabase";
 import { WATSON_WHATSAPP, whatsappLink } from "@/lib/whatsapp";
 
-export type SentDocument = { id: string; file_name: string; media_type: string; size_bytes: number; created_at: string };
+export type SentDocument = {
+  id: string; file_name: string; media_type: string; size_bytes: number; created_at: string;
+  removed_at: string | null; cleanup_completed_at: string | null;
+};
 type Props = {
   token: string;
   whatsappCode: string;
@@ -76,7 +79,10 @@ export function PatientDocuments({ token, whatsappCode, patient, documents, onCh
     setProblem(null);
     const outcome = await call<{ path: string }>("patient_remove_document", { p_token: token, p_document_id: document.id });
     if (!outcome.ok) return setProblem(explain(outcome.error_category));
-    await supabase.storage.from("documents").remove([outcome.path]);
+    const { data, error } = await supabase.functions.invoke<{ ok: boolean }>("document-cleanup", {
+      body: { document_id: document.id, token },
+    });
+    if (error || !data?.ok) setProblem("Access was revoked, but storage cleanup is pending. Retry removal.");
     onChanged();
   }
 
@@ -116,9 +122,20 @@ export function PatientDocuments({ token, whatsappCode, patient, documents, onCh
                 <p className="wa-doc__meta">{fileSize(document.size_bytes)}</p>
               </div>
               <div className="wa-doc__end">
-                <span className="wa-chip wa-chip--done"><Check aria-hidden className="wa-icon wa-icon--sm" />Sent</span>
-                <button type="button" className="wa-button wa-button--quiet wa-button--small" aria-label={`Remove ${document.file_name}`}
-                  onClick={() => remove(document)}>Remove</button>
+                {document.removed_at ? (
+                  <span className={`wa-chip ${document.cleanup_completed_at ? "wa-chip--done" : "wa-chip--attention"}`}>
+                    {document.cleanup_completed_at ? "Removed" : "Removal pending"}
+                  </span>
+                ) : (
+                  <span className="wa-chip wa-chip--done"><Check aria-hidden className="wa-icon wa-icon--sm" />Sent</span>
+                )}
+                {(!document.removed_at || !document.cleanup_completed_at) && (
+                  <button type="button" className="wa-button wa-button--quiet wa-button--small" aria-label={
+                    document.removed_at ? `Retry removal of ${document.file_name}` : `Remove ${document.file_name}`
+                  } onClick={() => remove(document)}>
+                    {document.removed_at ? "Retry removal" : "Remove"}
+                  </button>
+                )}
               </div>
             </li>
           ))}

@@ -585,6 +585,7 @@ export type Database = {
       patient_documents: {
         Row: {
           claimed_at: string | null
+          cleanup_completed_at: string | null
           consultation_id: string
           created_at: string
           engine_user_id: string | null
@@ -592,6 +593,7 @@ export type Database = {
           file_name: string
           id: string
           media_type: string
+          removed_at: string | null
           page_texts: string[] | null
           patient_id: string
           practitioner_id: string
@@ -605,6 +607,7 @@ export type Database = {
         }
         Insert: {
           claimed_at?: string | null
+          cleanup_completed_at?: string | null
           consultation_id: string
           created_at?: string
           engine_user_id?: string | null
@@ -612,6 +615,7 @@ export type Database = {
           file_name: string
           id?: string
           media_type: string
+          removed_at?: string | null
           page_texts?: string[] | null
           patient_id: string
           practitioner_id: string
@@ -625,6 +629,7 @@ export type Database = {
         }
         Update: {
           claimed_at?: string | null
+          cleanup_completed_at?: string | null
           consultation_id?: string
           created_at?: string
           engine_user_id?: string | null
@@ -632,6 +637,7 @@ export type Database = {
           file_name?: string
           id?: string
           media_type?: string
+          removed_at?: string | null
           page_texts?: string[] | null
           patient_id?: string
           practitioner_id?: string
@@ -1085,6 +1091,7 @@ export type Database = {
         Args: { p_segment_id: string; p_spellings?: Json; p_text: string }
         Returns: Json
       }
+      complete_document_cleanup: { Args: { p_document_id: string }; Returns: boolean }
       create_consultation: {
         Args: {
           p_consent_recorded: boolean
@@ -1554,4 +1561,3 @@ export const Constants = {
     },
   },
 } as const
-
