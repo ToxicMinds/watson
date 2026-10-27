@@ -100,6 +100,27 @@ describe("a signed-out visitor", () => {
 });
 
 describe("a patient account", () => {
+  it("can be provisioned as a patient after Auth has verified its email", async () => {
+    const email = `new-patient-${crypto.randomUUID()}@watson.test`;
+    const created = await adminClient(stack).auth.admin.createUser({ email, password: PASSWORD, email_confirm: true });
+    expect(created.error).toBeNull();
+    const patient = browserClient(stack);
+    const signedIn = await patient.auth.signInWithPassword({ email, password: PASSWORD });
+    expect(signedIn.error).toBeNull();
+
+    const { data, error } = await patient.rpc("bootstrap_patient_role" as never, {} as never);
+    expect(error).toBeNull();
+    expect(data).toEqual({ ok: true, roles: ["patient"] });
+    expect((await patient.rpc("current_user_roles")).data).toEqual(["patient"]);
+  });
+
+  it("does not add patient role to a practitioner account", async () => {
+    const { data, error } = await anna.client.rpc("bootstrap_patient_role" as never, {} as never);
+    expect(error).toBeNull();
+    expect(data).toEqual({ ok: false, error_category: "ROLE_ALREADY_ASSIGNED" });
+    expect((await anna.client.rpc("current_user_roles")).data).toEqual(["practitioner"]);
+  });
+
   it("cannot call practitioner functions, even when it owns a practitioner record", async () => {
     const patient = await newPractitioner(stack, "patient-role");
     sqlAsOwner(`
