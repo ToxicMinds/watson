@@ -436,3 +436,6 @@ verify_jwt = false
 
 [functions.google]
 verify_jwt = false
+
+[functions.patient-otp]
+verify_jwt = false

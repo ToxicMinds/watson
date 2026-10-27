@@ -3,8 +3,8 @@ import { browserClient, localStack } from "./local-stack";
 
 const MAILPIT = "http://127.0.0.1:54324/api/v1";
 
-describe("patient email OTP", () => {
-  it("sends an eight-digit Auth code, issues a Supabase session, and provisions only patient role", async () => {
+describe("native Auth OTP does not grant patient access", () => {
+  it("cannot bypass the server challenge to self-provision patient role", async () => {
     const stack = localStack();
     const client = browserClient(stack);
     const email = `patient-otp-${crypto.randomUUID()}@watson.test`;
@@ -23,7 +23,6 @@ describe("patient email OTP", () => {
     const messageResponse = await fetch(`${MAILPIT}/message/${messageInfo!.ID}`);
     expect(messageResponse.ok).toBe(true);
     const message = await messageResponse.json() as { Subject: string; Text: string };
-    expect(message.Subject).toBe("Your Watson sign-in code");
     const code = message.Text.match(/(?:^|\n)(\d{8})(?:\n|$)/)?.[1];
     expect(code).toMatch(/^\d{8}$/);
 
@@ -31,10 +30,12 @@ describe("patient email OTP", () => {
     expect(verified.error).toBeNull();
     expect(verified.data.session?.access_token).toBeTruthy();
 
-    const role = await client.rpc("bootstrap_patient_role");
-    expect(role.error).toBeNull();
-    expect(role.data).toEqual({ ok: true, roles: ["patient"] });
-    expect((await client.rpc("current_user_roles")).data).toEqual(["patient"]);
+    expect((await client.rpc("current_user_roles")).data).toEqual([]);
+    const role = await client.rpc("provision_patient_role_after_otp" as never, {
+      p_user_id: verified.data.user!.id,
+    } as never);
+    expect(role.error).not.toBeNull();
+    expect((await client.rpc("current_user_roles")).data).toEqual([]);
 
     const replay = await client.auth.verifyOtp({ email, token: code!, type: "email" });
     expect(replay.error).not.toBeNull();

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { adminClient, browserClient, localStack } from "./local-stack";
+import { adminClient, browserClient, localStack, sqlAsOwner } from "./local-stack";
 
 const stack = localStack();
 type Result = { ok: boolean; error_category?: string };
@@ -66,6 +66,48 @@ describe("server-enforced patient OTP challenge", () => {
     })).toEqual({ ok: true });
     await expect(call("verify_patient_otp_challenge", {
       p_contact_hash: contact, p_code_hash: code, p_ip_hash: ip,
+    })).resolves.toMatchObject({ ok: false, error_category: "INVALID_CODE" });
+  });
+
+  it("rejects a challenge after its expiry", async () => {
+    const contact = hash(`contact-${crypto.randomUUID()}`);
+    const ip = hash(`ip-${crypto.randomUUID()}`);
+    const code = hash(`otp-${crypto.randomUUID()}`);
+    expect(await call("issue_patient_otp_challenge", {
+      p_contact_hash: contact, p_code_hash: code, p_ip_hash: ip,
+    })).toEqual({ ok: true });
+    sqlAsOwner(`update private.patient_otp_challenges set expires_at = now() - interval '1 second' where contact_hash = '${contact}';`);
+    await expect(call("verify_patient_otp_challenge", {
+      p_contact_hash: contact, p_code_hash: code, p_ip_hash: ip,
+    })).resolves.toMatchObject({ ok: false, error_category: "INVALID_CODE" });
+  });
+
+  it("cancels a challenge only when the provider fails to deliver that exact code", async () => {
+    const contact = hash(`contact-${crypto.randomUUID()}`);
+    const ip = hash(`ip-${crypto.randomUUID()}`);
+    const code = hash(`otp-${crypto.randomUUID()}`);
+    expect(await call("issue_patient_otp_challenge", {
+      p_contact_hash: contact, p_code_hash: code, p_ip_hash: ip,
+    })).toEqual({ ok: true });
+    const cancelled = await adminClient(stack).rpc("cancel_patient_otp_challenge" as never, {
+      p_contact_hash: contact, p_code_hash: hash("wrong-code"),
+    } as never);
+    expect(cancelled.data).toEqual({ ok: true });
+    expect(await call("verify_patient_otp_challenge", {
+      p_contact_hash: contact, p_code_hash: code, p_ip_hash: ip,
+    })).toEqual({ ok: true });
+
+    const nextContact = hash(`contact-${crypto.randomUUID()}`);
+    const nextCode = hash(`otp-${crypto.randomUUID()}`);
+    expect(await call("issue_patient_otp_challenge", {
+      p_contact_hash: nextContact, p_code_hash: nextCode, p_ip_hash: ip,
+    })).toEqual({ ok: true });
+    const deliveredFailure = await adminClient(stack).rpc("cancel_patient_otp_challenge" as never, {
+      p_contact_hash: nextContact, p_code_hash: nextCode,
+    } as never);
+    expect(deliveredFailure.data).toEqual({ ok: true });
+    await expect(call("verify_patient_otp_challenge", {
+      p_contact_hash: nextContact, p_code_hash: nextCode, p_ip_hash: ip,
     })).resolves.toMatchObject({ ok: false, error_category: "INVALID_CODE" });
   });
 });

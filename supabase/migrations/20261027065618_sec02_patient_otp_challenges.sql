@@ -211,3 +211,21 @@ end;
 $$;
 revoke all on function public.verify_patient_otp_challenge(text, text, text) from public, anon, authenticated, service_role;
 grant execute on function public.verify_patient_otp_challenge(text, text, text) to service_role;
+
+create function public.cancel_patient_otp_challenge(p_contact_hash text, p_code_hash text) returns jsonb
+language plpgsql security definer set search_path = ''
+as $$
+begin
+  if coalesce(p_contact_hash, '') !~ '^[0-9a-f]{64}$'
+    or coalesce(p_code_hash, '') !~ '^[0-9a-f]{64}$' then
+    return private.refuse('VALIDATION');
+  end if;
+  update private.patient_otp_challenges set used_at = now(), updated_at = now()
+  where contact_hash = p_contact_hash
+    and private.sec02_otp_hash_equal(code_hash, p_code_hash)
+    and used_at is null;
+  return jsonb_build_object('ok', true);
+end;
+$$;
+revoke all on function public.cancel_patient_otp_challenge(text, text) from public, anon, authenticated, service_role;
+grant execute on function public.cancel_patient_otp_challenge(text, text) to service_role;

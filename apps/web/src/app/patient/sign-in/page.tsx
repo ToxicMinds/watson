@@ -46,11 +46,10 @@ export default function PatientSignIn() {
 
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: normalizedEmail,
-        options: { shouldCreateUser: true },
+      const { data, error } = await supabase.functions.invoke<{ ok: boolean }>("patient-otp", {
+        body: { action: "send", email: normalizedEmail },
       });
-      if (error) throw error;
+      if (error || !data?.ok) throw error ?? new Error("OTP send failed");
       setEmail(normalizedEmail);
       setSent(true);
       setSentAt(Date.now());
@@ -71,8 +70,13 @@ export default function PatientSignIn() {
 
     setBusy(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke<{
+        ok: boolean;
+        session?: { access_token: string; refresh_token: string };
+      }>("patient-otp", { body: { action: "verify", email, code } });
+      if (error || !data?.ok || !data.session) throw error ?? new Error("OTP verification failed");
+      const { error: sessionError } = await supabase.auth.setSession(data.session);
+      if (sessionError) throw sessionError;
       router.replace("/patient/");
     } catch {
       setFailure("That code is invalid or has expired. Request a new code and try again.");

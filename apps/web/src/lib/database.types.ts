@@ -1040,7 +1040,8 @@ export type Database = {
     }
     Functions: {
       current_user_roles: { Args: Record<PropertyKey, never>; Returns: string[] }
-      bootstrap_patient_role: { Args: Record<PropertyKey, never>; Returns: Json }
+      provision_patient_role_after_otp: { Args: { p_user_id: string }; Returns: Json }
+      register_patient_otp_session: { Args: { p_user_id: string; p_session_id: string }; Returns: Json }
       issue_patient_otp_challenge: {
         Args: { p_contact_hash: string; p_code_hash: string; p_ip_hash: string }
         Returns: Json
@@ -1049,6 +1050,7 @@ export type Database = {
         Args: { p_contact_hash: string; p_code_hash: string; p_ip_hash: string }
         Returns: Json
       }
+      cancel_patient_otp_challenge: { Args: { p_contact_hash: string; p_code_hash: string }; Returns: Json }
       add_document: {
         Args: {
           p_consultation_id: string
