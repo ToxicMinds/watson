@@ -1041,6 +1041,14 @@ export type Database = {
     Functions: {
       current_user_roles: { Args: Record<PropertyKey, never>; Returns: string[] }
       bootstrap_patient_role: { Args: Record<PropertyKey, never>; Returns: Json }
+      issue_patient_otp_challenge: {
+        Args: { p_contact_hash: string; p_code_hash: string; p_ip_hash: string }
+        Returns: Json
+      }
+      verify_patient_otp_challenge: {
+        Args: { p_contact_hash: string; p_code_hash: string; p_ip_hash: string }
+        Returns: Json
+      }
       add_document: {
         Args: {
           p_consultation_id: string

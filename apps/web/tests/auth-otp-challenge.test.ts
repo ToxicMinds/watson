@@ -1,11 +1,12 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { adminClient, localStack } from "./local-stack";
+import { adminClient, browserClient, localStack } from "./local-stack";
 
 const stack = localStack();
 type Result = { ok: boolean; error_category?: string };
 
 function hash(seed: string): string {
-  return seed.padEnd(64, "0").slice(0, 64);
+  return createHash("sha256").update(seed).digest("hex");
 }
 
 async function call(name: string, args: Record<string, string>): Promise<Result> {
@@ -15,6 +16,14 @@ async function call(name: string, args: Record<string, string>): Promise<Result>
 }
 
 describe("server-enforced patient OTP challenge", () => {
+  it("does not expose challenge RPCs to anonymous clients", async () => {
+    const anonymous = browserClient(stack);
+    const { error } = await anonymous.rpc("issue_patient_otp_challenge" as never, {
+      p_contact_hash: hash("contact"), p_code_hash: hash("code"), p_ip_hash: hash("ip"),
+    } as never);
+    expect(error).not.toBeNull();
+  });
+
   it("limits each contact to five guesses and locks the challenge after the fifth failure", async () => {
     const contact = hash(`contact-${crypto.randomUUID()}`);
     const ip = hash(`ip-${crypto.randomUUID()}`);
