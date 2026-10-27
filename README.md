@@ -50,6 +50,7 @@ Then export the hosted public URL/key and run `scripts/smoke-patient-otp.py`. It
 synthetic inbox and code without echoing the code, checks the resulting normal session has only
 the patient role, signs that test session out, and never prints or stores session tokens. Do not
 use a real patient's address. Complete this smoke test before enabling patient sign-in.
+Full gated rollout steps and rollback notes: [SEC-02 DevOps handoff](docs/sec-02-patient-otp-devops-handoff.md).
 
 ## Run all of Watson on one computer
 
