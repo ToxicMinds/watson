@@ -93,10 +93,14 @@ test("check every answer of the filled-in form against its quote, then approve i
         viewportWidth: window.innerWidth,
         sheetClientWidth: sheet?.clientWidth ?? 0,
         sheetScrollWidth: sheet?.scrollWidth ?? 0,
+        answerActions: [...document.querySelectorAll<HTMLElement>(".wa-review .wa-button--small")]
+          .filter((button) => button.offsetParent !== null)
+          .map((button) => button.getBoundingClientRect().height),
       };
     });
     expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
     expect(dimensions.sheetScrollWidth).toBeLessThanOrEqual(dimensions.sheetClientWidth);
+    expect(dimensions.answerActions.every((height) => height >= 44)).toBe(true);
   }
   await page.setViewportSize(originalViewport);
 
@@ -146,10 +150,25 @@ test("set a fee, send the patient's link; the patient sees the fee, then pays an
   expect(link).toMatch(/\/j\/[2-9A-HJ-NP-Z]{8}$/);
 
   const patient = await page.context().browser()!.newPage();
+  await patient.setViewportSize({ width: 320, height: 720 });
   await patient.goto(link);
   await expect(patient.getByText("€40.00", { exact: true })).toBeVisible();
   await expect(patient.getByRole("button", { name: "Pay €40.00" })).toBeVisible();
   await expect(patient.getByRole("button", { name: "Join the call" })).toHaveCount(0);
+  await expect(patient.getByLabel("Your name")).toBeVisible();
+  await expect(patient.getByLabel("Phone or email")).toBeVisible();
+  const phoneLayout = await patient.evaluate(() => ({
+    viewport: window.innerWidth,
+    document: document.documentElement.scrollWidth,
+    input: document.querySelector<HTMLInputElement>("#patient-name")?.getBoundingClientRect().toJSON(),
+    upload: [...document.querySelectorAll<HTMLButtonElement>(".wa-patient-entry .wa-actions button")]
+      .filter((button) => button.offsetParent !== null)
+      .map((button) => button.getBoundingClientRect().toJSON()),
+  }));
+  expect(phoneLayout.document).toBeLessThanOrEqual(phoneLayout.viewport);
+  expect(phoneLayout.input?.width).toBeGreaterThan(0);
+  expect(phoneLayout.upload.length).toBeGreaterThan(0);
+  expect(phoneLayout.upload.every((button) => button.height >= 44 && button.right <= phoneLayout.viewport)).toBe(true);
 
   // What Stripe's confirmation does, done here directly: the server records the payment.
   const id = new URL(page.url()).searchParams.get("id")!;

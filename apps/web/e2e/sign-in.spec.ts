@@ -23,6 +23,20 @@ test("empty fields are explained before anything is sent", async ({ page }) => {
   await expect(page.getByText("Enter your password.")).toBeVisible();
 });
 
+test("sign-in remains usable at phone width", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  await page.goto("/sign-in/");
+  const dimensions = await page.evaluate(() => ({
+    viewport: window.innerWidth,
+    document: document.documentElement.scrollWidth,
+    button: document.querySelector(".wa-door__card button")?.getBoundingClientRect().toJSON(),
+    card: document.querySelector(".wa-door__card")?.getBoundingClientRect().toJSON(),
+  }));
+  expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
+  expect(dimensions.button?.height).toBeGreaterThanOrEqual(44);
+  expect(dimensions.button?.width).toBeCloseTo(dimensions.card!.width - 34, 0);
+});
+
 test("a practitioner signs in, sees their consultations, and signs out", async ({ page, account, problems }) => {
   await page.goto("/sign-in/"); // the front page is for patients (owner, 16 Oct, E)
   await page.getByLabel("Name").fill(account.email.replace(/@watson\.test$/, ""));

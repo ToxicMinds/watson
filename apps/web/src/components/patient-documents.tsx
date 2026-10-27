@@ -88,7 +88,7 @@ export function PatientDocuments({ token, whatsappCode, patient, documents, onCh
 
   const error = (field: string) => fieldError?.field === field ? fieldError.message : null;
   return (
-    <section className="wa-panel" aria-labelledby="documents-title">
+    <section className="wa-panel wa-patient-entry" aria-labelledby="documents-title">
       <h2 className="wa-heading" id="documents-title">Documents for your practitioner</h2>
       <p className="wa-text">
         Lab results, reports or a list of your medicines. Your practitioner sees them before the call, and Watson, their assistant, reads them to prepare.
