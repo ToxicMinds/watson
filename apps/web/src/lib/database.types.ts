@@ -1040,6 +1040,7 @@ export type Database = {
     }
     Functions: {
       current_user_roles: { Args: Record<PropertyKey, never>; Returns: string[] }
+      bootstrap_patient_role: { Args: Record<PropertyKey, never>; Returns: Json }
       add_document: {
         Args: {
           p_consultation_id: string

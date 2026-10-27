@@ -27,8 +27,9 @@ export default function SignIn() {
   } = useForm<Values>({ resolver: zodResolver(schema) });
 
   useEffect(() => {
-    if (session.status === "signed-in") router.replace("/consultations/");
-  }, [session.status, router]);
+    if (session.status !== "signed-in" || session.roles === null) return;
+    router.replace(session.roles.includes("practitioner") ? "/consultations/" : "/patient/");
+  }, [session, router]);
 
   async function signIn(values: Values) {
     setFailure(null);
@@ -90,4 +91,3 @@ export default function SignIn() {
     </main>
   );
 }
-

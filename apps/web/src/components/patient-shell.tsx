@@ -13,8 +13,13 @@ export function PatientShell({ children }: { children: ReactNode }) {
         <div className="wa-header__inner">
           <Link href="/" className="wa-wordmark" aria-label="Watson, find a practitioner">Watson</Link>
           {session.status === "signed-in"
-            ? <Link href="/consultations/" className="wa-crumb">Your consultations</Link>
-            : <Link href="/sign-in/" className="wa-crumb">Practitioner sign-in</Link>}
+            ? <Link href={session.roles?.includes("patient") ? "/patient/" : "/consultations/"} className="wa-crumb">
+              {session.roles?.includes("patient") ? "Your account" : "Your consultations"}
+            </Link>
+            : <nav className="wa-public-signin" aria-label="Sign in">
+              <Link href="/patient/sign-in/" className="wa-crumb">Patient sign-in</Link>
+              <Link href="/sign-in/" className="wa-crumb">Practitioner sign-in</Link>
+            </nav>}
         </div>
       </header>
       <main className="wa-page">{children}</main>

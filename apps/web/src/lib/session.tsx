@@ -27,12 +27,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (state.status !== "signed-in" || state.roles !== null) return;
     let active = true;
     const userId = state.user.id;
-    void supabase.rpc("current_user_roles").then(({ data, error }) => {
+    void (async () => {
+      const current = await supabase.rpc("current_user_roles");
       if (!active) return;
-      setState((current) => current.status === "signed-in" && current.user.id === userId
-        ? { ...current, roles: error ? [] : data }
-        : current);
-    });
+      if (current.error) {
+        setState((state) => state.status === "signed-in" && state.user.id === userId
+          ? { ...state, roles: [] }
+          : state);
+        return;
+      }
+
+      let roles = current.data ?? [];
+      if (roles.length === 0) {
+        const provisioned = await supabase.rpc("bootstrap_patient_role");
+        if (provisioned.data && typeof provisioned.data === "object" && "ok" in provisioned.data
+          && provisioned.data.ok === true && "roles" in provisioned.data
+          && Array.isArray(provisioned.data.roles)) {
+          roles = provisioned.data.roles as string[];
+        }
+      }
+      if (!active) return;
+      setState((state) => state.status === "signed-in" && state.user.id === userId
+        ? { ...state, roles }
+        : state);
+    })();
     return () => { active = false; };
   }, [state]);
 

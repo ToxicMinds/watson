@@ -46,6 +46,13 @@ The required acceptance scenario is preserved verbatim in the test plan below. S
 - Auth-created accounts receive `patient` role from trusted DB-side provisioning. Existing practitioner accounts retain their role and their current password login. Changing roles must invalidate or re-check active sessions so stale tokens cannot preserve prior authority.
 - The email sender is Watson's Gmail, not Resend and not a doctor-supplied address. Store Gmail OAuth refresh credentials in Supabase Vault/secrets, request only Gmail send scope, and use Gmail API over `fetch`; do not add a Gmail SDK package. WhatsApp sender stays Watson's existing gateway number for this work.
 
+### OTP implementation status (27 Oct 2026)
+
+- The local email sign-in flow now uses Supabase Auth OTP, an 8-digit code, 600-second expiry, 60-second resend cooldown, and five Auth verification attempts per IP per five minutes. Auth-created users receive no session until email confirmation; after sign-in, an authenticated DB function provisions only the patient role when the Auth email or phone is confirmed and the account has no existing role.
+- Local Mailpit integration and browser tests prove send → read code → verify → normal Supabase session → patient role. Patient and practitioner sign-in are separate; practitioner password sign-in remains unchanged. The patient shell exposes no other consultation data.
+- **Not production-complete:** current Supabase Auth has no email-OTP per-challenge failed-attempt hook/cap; verification throttling is IP-only. The current Auth verification endpoint remains directly callable, so a UI-only attempt guard would not close this gap. Current local delivery uses Mailpit; Watson Gmail API send hook, production secrets/configuration, and provider proof are not implemented. WhatsApp OTP stays disabled because the existing Baileys gateway is explicitly unofficial and may result in account bans.
+- Keep W2/W6 release blocked until a server-enforced challenge design that still yields a normal Supabase session is implemented and tested, and the production mail provider is configured and verified. Do not treat a passing local OTP test as production delivery/security approval.
+
 ### Claims, association and document ownership
 
 - Add consultation-scoped claim fields for the name and phone/email entered at booking or on a consultation link, with explicit verification/association state. They must not be populated from canonical patient fields when migrating legacy rows; that could reproduce the disclosure being fixed.

@@ -87,10 +87,12 @@ describe("a signed-out visitor", () => {
     expect((await visitor.rpc("record_consent", { p_consultation_id: annas })).error).not.toBeNull();
   });
 
-  it("cannot create an account", async () => {
-    const { data, error } = await visitor.auth.signUp({ email: "stranger@watson.test", password: PASSWORD });
-    expect(error).not.toBeNull();
-    expect(data.user).toBeNull();
+  it("cannot get a session from signup before verifying the email", async () => {
+    const email = `unverified-${crypto.randomUUID()}@watson.test`;
+    const { data, error } = await visitor.auth.signUp({ email, password: PASSWORD });
+    expect(error).toBeNull();
+    expect(data.user).not.toBeNull();
+    expect(data.session).toBeNull();
   });
 
   it("is refused with a wrong password", async () => {
