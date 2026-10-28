@@ -439,3 +439,6 @@ verify_jwt = false
 
 [functions.patient-otp]
 verify_jwt = false
+
+[functions.ice]
+verify_jwt = false
