@@ -175,6 +175,8 @@ async function makeSession(email: string): Promise<{ access_token: string; refre
   const { data: registered, error: registrationError } = await admin.rpc("register_patient_otp_session", {
     p_user_id: user.id,
     p_session_id: sessionId,
+    p_verified_email: email,
+    p_verified_phone: null,
   });
   if (registrationError || !(registered as ChallengeReply | null)?.ok) throw new Error("AUTH_UNAVAILABLE");
   return { access_token: data.session.access_token, refresh_token: data.session.refresh_token };

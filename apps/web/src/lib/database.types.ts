@@ -176,8 +176,16 @@ export type Database = {
           id: string
           invite_token: string
           language: Database["public"]["Enums"]["consultation_language"]
+          legacy_patient_id: string | null
           paid_amount_cents: number | null
           paid_at: string | null
+          patient_associated_at: string | null
+          patient_associated_by: string | null
+          patient_association_state: string
+          patient_claim_email: string | null
+          patient_claim_name: string | null
+          patient_claim_phone: string | null
+          patient_claim_updated_at: string | null
           patient_id: string | null
           practitioner_id: string
           recorded_together: boolean
@@ -206,8 +214,16 @@ export type Database = {
           id?: string
           invite_token?: string
           language: Database["public"]["Enums"]["consultation_language"]
+          legacy_patient_id?: string | null
           paid_amount_cents?: number | null
           paid_at?: string | null
+          patient_associated_at?: string | null
+          patient_associated_by?: string | null
+          patient_association_state?: string
+          patient_claim_email?: string | null
+          patient_claim_name?: string | null
+          patient_claim_phone?: string | null
+          patient_claim_updated_at?: string | null
           patient_id?: string | null
           practitioner_id: string
           recorded_together?: boolean
@@ -236,8 +252,16 @@ export type Database = {
           id?: string
           invite_token?: string
           language?: Database["public"]["Enums"]["consultation_language"]
+          legacy_patient_id?: string | null
           paid_amount_cents?: number | null
           paid_at?: string | null
+          patient_associated_at?: string | null
+          patient_associated_by?: string | null
+          patient_association_state?: string
+          patient_claim_email?: string | null
+          patient_claim_name?: string | null
+          patient_claim_phone?: string | null
+          patient_claim_updated_at?: string | null
           patient_id?: string | null
           practitioner_id?: string
           recorded_together?: boolean
@@ -592,10 +616,11 @@ export type Database = {
           error_category: string | null
           file_name: string
           id: string
+          legacy_patient_id: string | null
           media_type: string
           removed_at: string | null
           page_texts: string[] | null
-          patient_id: string
+          patient_id: string | null
           practitioner_id: string
           read_at: string | null
           reading: Database["public"]["Enums"]["document_reading"]
@@ -614,10 +639,11 @@ export type Database = {
           error_category?: string | null
           file_name: string
           id?: string
+          legacy_patient_id?: string | null
           media_type: string
           removed_at?: string | null
           page_texts?: string[] | null
-          patient_id: string
+          patient_id?: string | null
           practitioner_id: string
           read_at?: string | null
           reading?: Database["public"]["Enums"]["document_reading"]
@@ -636,10 +662,11 @@ export type Database = {
           error_category?: string | null
           file_name?: string
           id?: string
+          legacy_patient_id?: string | null
           media_type?: string
           removed_at?: string | null
           page_texts?: string[] | null
-          patient_id?: string
+          patient_id?: string | null
           practitioner_id?: string
           read_at?: string | null
           reading?: Database["public"]["Enums"]["document_reading"]
@@ -1041,7 +1068,15 @@ export type Database = {
     Functions: {
       current_user_roles: { Args: Record<PropertyKey, never>; Returns: string[] }
       provision_patient_role_after_otp: { Args: { p_user_id: string }; Returns: Json }
-      register_patient_otp_session: { Args: { p_user_id: string; p_session_id: string }; Returns: Json }
+      register_patient_otp_session: {
+        Args: {
+          p_user_id: string
+          p_session_id: string
+          p_verified_email: string | null
+          p_verified_phone: string | null
+        }
+        Returns: Json
+      }
       issue_patient_otp_challenge: {
         Args: { p_contact_hash: string; p_code_hash: string; p_ip_hash: string }
         Returns: Json
@@ -1239,8 +1274,13 @@ export type Database = {
         Args: { p_contact: string; p_name: string; p_token: string }
         Returns: Json
       }
+      patient_link_consultation: { Args: { p_token: string }; Returns: Json }
       patient_remove_document: {
         Args: { p_document_id: string; p_token: string }
+        Returns: Json
+      }
+      patient_review_association: {
+        Args: { p_consultation_id: string; p_decision: string; p_patient_id: string | null }
         Returns: Json
       }
       read_document_again: { Args: { p_document_id: string }; Returns: Json }

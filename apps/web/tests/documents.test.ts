@@ -51,28 +51,33 @@ async function claim(documentId: string) {
   throw new Error("document was never offered to the engine");
 }
 
-describe("a patient", () => {
-  it("is known by phone number, in one format, so the same number is the same patient next time", async () => {
+describe("an unverified patient claim", () => {
+  it("normalizes a phone per consultation without joining canonical patient records", async () => {
     const [first, second] = [await consultation(eva), await consultation(eva)];
     const visitor = browserClient(stack);
     const number = `+4219${Math.floor(Math.random() * 1e8).toString().padStart(8, "0")}`;
     const spaced = `00${number.slice(1, 4)} ${number.slice(4, 7)}-${number.slice(7, 10)} ${number.slice(10)}`;
     const a = await rpc(visitor, "patient_identify", { p_token: first.invite_token, p_name: "Jana Nováková", p_contact: spaced });
     const b = await rpc(visitor, "patient_identify", { p_token: second.invite_token, p_name: "Jana Nováková", p_contact: number });
-    expect(a.patient_id).toBe(b.patient_id);
-    const { data } = await eva.client.from("patients").select("phone, email, name").eq("id", a.patient_id as string).single();
-    expect(data).toEqual({ phone: number, email: null, name: "Jana Nováková" });
-    const linked = (await eva.client.from("consultations").select("patient_id").in("id", [first.id, second.id])).data!;
-    expect(linked.map((row) => row.patient_id)).toEqual([a.patient_id, a.patient_id]);
+    expect(a).toEqual({ ok: true });
+    expect(b).toEqual({ ok: true });
+    expect((await eva.client.from("patients").select("id")).data).toEqual([]);
+    const linked = (await eva.client.from("consultations")
+      .select("patient_id, patient_claim_phone, patient_association_state").in("id", [first.id, second.id])).data!;
+    expect(linked).toEqual([
+      { patient_id: null, patient_claim_phone: number, patient_association_state: "claimed" },
+      { patient_id: null, patient_claim_phone: number, patient_association_state: "claimed" },
+    ]);
   });
 
-  it("is known by email when they have no phone, and refused without a usable contact or name", async () => {
+  it("normalizes an email claim and refuses an unusable contact or name", async () => {
     const { invite_token: token } = await consultation(eva);
     const visitor = browserClient(stack);
     const email = `Jana.${randomUUID().slice(0, 6)}@Example.com`;
-    const made = await rpc(visitor, "patient_identify", { p_token: token, p_name: "Jana", p_contact: ` ${email} ` });
-    const { data } = await eva.client.from("patients").select("email").eq("id", made.patient_id as string).single();
-    expect(data!.email).toBe(email.toLowerCase());
+    expect(await rpc(visitor, "patient_identify", { p_token: token, p_name: "Jana", p_contact: ` ${email} ` }))
+      .toEqual({ ok: true });
+    const { data } = await eva.client.from("consultations").select("patient_id, patient_claim_email").eq("invite_token", token).single();
+    expect(data).toEqual({ patient_id: null, patient_claim_email: email.toLowerCase() });
     for (const contact of ["0900 123 456", "jana@", "", "+0 12"]) {
       expect(await rpc(visitor, "patient_identify", { p_token: token, p_name: "Jana", p_contact: contact }), contact)
         .toEqual({ ok: false, error_category: "VALIDATION", field: "contact" });
@@ -99,7 +104,7 @@ describe("a document from the patient's page", () => {
 
     await rpc(visitor, "patient_identify", { p_token: token, p_name: "Jana Nováková", p_contact: `+4219${Date.now() % 1e8}` });
     const added = await rpc(visitor, "patient_add_document", args);
-    expect(added.path).toBe(`${eva.id}/${added.document_id}`);
+    expect(added.path).toBe(`${eva.id}/${consultationId}/${added.document_id}`);
     expect(await rpc(visitor, "patient_confirm_document", { p_token: token, p_document_id: added.document_id }))
       .toEqual({ ok: false, error_category: "DOCUMENT_FILE_MISSING" });
     expect((await visitor.storage.from("documents").upload(`${eva.id}/${randomUUID()}`, PDF, { contentType: "application/pdf" })).error).not.toBeNull();

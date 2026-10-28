@@ -143,10 +143,11 @@ describe("booking a time", () => {
     expect(booked.token).toMatch(/^[0-9a-f]{64}$/);
 
     const { data: made } = await who.client.from("consultations")
-      .select("scheduled_at, duration_minutes, fee_cents, language, status, booked_at, hold_until, remind_whatsapp, invite_token, patients(name, phone)").single();
+      .select("scheduled_at, duration_minutes, fee_cents, language, status, booked_at, hold_until, remind_whatsapp, invite_token, patient_id, patient_claim_name, patient_claim_phone, patients(name, phone)").single();
     expect(made).toMatchObject({
       duration_minutes: 45, fee_cents: 4000, language: "sk", status: "consent_pending", remind_whatsapp: true,
-      invite_token: booked.token, patients: { name: "Jana Nováková", phone: "+421905111222" },
+      invite_token: booked.token, patient_id: null, patient_claim_name: "Jana Nováková",
+      patient_claim_phone: "+421905111222", patients: null,
     });
     expect(Date.parse(made!.scheduled_at)).toBe(Date.parse(nine));
     expect(Date.parse(made!.hold_until!) - Date.parse(made!.booked_at!)).toBe(35 * 60_000);

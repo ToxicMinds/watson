@@ -26,7 +26,7 @@ const receive = (number: string, body: string, kind = "text", id = `wamid.${rand
   serverCall("whatsapp_receive", { p_wa_message_id: id, p_phone: number, p_profile_name: "Jana Nováková", p_kind: kind, p_body: body });
 
 describe("a patient's WhatsApp number", () => {
-  it("links itself to the consultation whose code it sends, and makes the patient known by it", async () => {
+  it("routes to the consultation and records only a consultation-scoped claim", async () => {
     const { id, whatsapp_code: code, invite_token: token } = await consultation();
     expect(code).toMatch(/^[0-9A-F]{8}$/);
     const number = phone();
@@ -35,8 +35,11 @@ describe("a patient's WhatsApp number", () => {
       ok: true, linked: true,
       consultation: { consultation_id: id, scheduled_at: "2026-10-20T07:30:00+00:00", language: "sk", invite_token: token, short_code: expect.stringMatching(/^[2-9A-HJ-NP-Z]{8}$/), must_pay: true, patient_name: "Jana Nováková" },
     });
-    const { data: patient } = await eva.client.from("patients").select("name, phone").single();
-    expect(patient).toEqual({ name: "Jana Nováková", phone: number });
+    expect((await eva.client.from("patients").select("id")).data).toEqual([]);
+    const { data: claim } = await eva.client.from("consultations")
+      .select("patient_id, patient_claim_name, patient_claim_phone, patient_association_state").eq("id", id).single();
+    expect(claim).toEqual({ patient_id: null, patient_claim_name: "Jana Nováková",
+      patient_claim_phone: number, patient_association_state: "claimed" });
     expect((await eva.client.from("whatsapp_contacts").select("phone, consultation_id")).data).toEqual([{ phone: number, consultation_id: id }]);
 
     // Later messages are recognised by the number alone; a delivery Meta repeats is recorded once.
