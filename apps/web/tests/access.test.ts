@@ -134,8 +134,17 @@ describe("a patient account", () => {
     const sessionId = JSON.parse(atob(payload.padEnd(Math.ceil(payload.length / 4) * 4, "="))).session_id as string;
     expect((await patient.rpc("current_user_roles")).data).toEqual([]);
 
+    const wrongContact = await adminClient(stack).rpc("register_patient_otp_session" as never, {
+      p_user_id: created.data.user!.id, p_session_id: sessionId,
+      p_verified_email: `other-${crypto.randomUUID()}@watson.test`, p_verified_phone: null,
+    } as never);
+    expect(wrongContact.error).toBeNull();
+    expect(wrongContact.data).toEqual({ ok: false, error_category: "CONTACT_UNVERIFIED" });
+    expect((await patient.rpc("current_user_roles")).data).toEqual([]);
+
     const registered = await adminClient(stack).rpc("register_patient_otp_session" as never, {
       p_user_id: created.data.user!.id, p_session_id: sessionId,
+      p_verified_email: email, p_verified_phone: null,
     } as never);
     expect(registered.error).toBeNull();
     expect(registered.data).toEqual({ ok: true });
@@ -165,6 +174,7 @@ describe("a patient account", () => {
     const sessionId = JSON.parse(atob(sessionPayload.padEnd(Math.ceil(sessionPayload.length / 4) * 4, "="))).session_id as string;
     const admitted = await adminClient(stack).rpc("register_patient_otp_session" as never, {
       p_user_id: patient.id, p_session_id: sessionId,
+      p_verified_email: patient.email, p_verified_phone: null,
     } as never);
     expect(admitted.error).toBeNull();
     expect((await patient.client.rpc("current_user_roles")).data).toEqual(["patient"]);
