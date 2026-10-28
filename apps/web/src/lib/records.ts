@@ -4,12 +4,17 @@ import type { ConsultationRecord, FormAnswer, FormTemplate, Turn } from "./expor
 import { loginName } from "./session";
 import { supabase } from "./supabase";
 
-type Row = { id: string; scheduled_at: string; synthetic_patient_ref: string; patients: { name: string; phone: string | null; email: string | null } | null };
+type Row = {
+  id: string; scheduled_at: string; synthetic_patient_ref: string;
+  patient_claim_name: string | null; patient_claim_phone: string | null; patient_claim_email: string | null;
+  patients: { name: string; phone: string | null; email: string | null } | null;
+};
 type Form = { consultation_id: string; template: unknown; approved_at: string | null; form_answers: FormAnswer[] };
 
 /** One consultation (with its conversation), or every one the practitioner has, newest first. */
 export async function loadRecords(consultationId?: string): Promise<ConsultationRecord[] | null> {
-  let consultations = supabase.from("consultations").select("id, scheduled_at, synthetic_patient_ref, patients(name, phone, email)")
+  let consultations = supabase.from("consultations")
+    .select("id, scheduled_at, synthetic_patient_ref, patient_claim_name, patient_claim_phone, patient_claim_email, patients(name, phone, email)")
     .filter("released", "eq", false).order("scheduled_at", { ascending: false });
   if (consultationId) consultations = consultations.eq("id", consultationId);
   let forms = supabase.from("forms").select("consultation_id, template, approved_at, form_answers(field_key, machine_text, practitioner_text, review)")
@@ -25,8 +30,8 @@ export async function loadRecords(consultationId?: string): Promise<Consultation
   return ((rows.data ?? []) as unknown as Row[]).map((row) => {
     const form = byConsultation.get(row.id);
     return {
-      patient: row.patients?.name ?? row.synthetic_patient_ref,
-      contact: row.patients?.phone ?? row.patients?.email ?? "",
+      patient: row.patients?.name ?? row.patient_claim_name ?? row.synthetic_patient_ref,
+      contact: row.patients?.phone ?? row.patients?.email ?? row.patient_claim_phone ?? row.patient_claim_email ?? "",
       scheduledAt: row.scheduled_at, practitioner,
       approvedAt: form?.approved_at ?? null,
       template: (form?.template as FormTemplate | undefined) ?? null,

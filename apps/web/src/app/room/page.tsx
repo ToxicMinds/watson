@@ -124,7 +124,7 @@ function Room({ userId }: { userId: string }) {
   if (!state && !step && (loaded.tracks > 0 || !CAN_CALL.includes(consultation.status))) {
     return (
       <>{back}
-        <h1 className="wa-title">{consultation.patients?.name ?? consultation.synthetic_patient_ref}</h1>
+        <h1 className="wa-title">{consultation.patients?.name ?? consultation.patient_claim_name ?? consultation.synthetic_patient_ref}</h1>
         <Notice title="This consultation already has audio">A call can be recorded only before any audio is attached.</Notice>
       </>
     );
@@ -209,7 +209,7 @@ function Room({ userId }: { userId: string }) {
       {back}
       <div className="wa-pagehead">
         <div className="wa-pagehead__text">
-          <h1 className="wa-title">{consultation.patients?.name ?? consultation.synthetic_patient_ref}</h1>
+          <h1 className="wa-title">{consultation.patients?.name ?? consultation.patient_claim_name ?? consultation.synthetic_patient_ref}</h1>
           <p className="wa-meta">Video call. Both voices are recorded, with a live transcript beside the video; the full transcript follows when you end the call.</p>
         </div>
       </div>
@@ -275,7 +275,7 @@ function Room({ userId }: { userId: string }) {
             {lines.map((line) => (
               <li key={`${line.speaker}-${line.seq}`} className={`wa-quote wa-quote--${line.speaker}`}>
                 <div>
-                  <span className="wa-quote__who">{line.speaker === "practitioner" ? "You" : consultation.patients?.name ?? "Patient"}</span>
+                  <span className="wa-quote__who">{line.speaker === "practitioner" ? "You" : consultation.patients?.name ?? consultation.patient_claim_name ?? "Patient"}</span>
                   <span className="wa-livetext__when">{clock(line.offset_seconds)}</span>
                   <CorrectableLine textClassName="wa-quote__text" text={line.text} heard={line.heard_text}
                     onSave={(text, spellings) => correctLine(line.id, text, spellings)} />

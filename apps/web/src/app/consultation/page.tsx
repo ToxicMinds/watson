@@ -146,7 +146,7 @@ function ConsultationView({ userId }: { userId: string }) {
       {back}
       <div className="wa-pagehead">
         <div className="wa-pagehead__text">
-          <h1 className="wa-title">{patient?.name ?? consultation.synthetic_patient_ref}</h1>
+          <h1 className="wa-title">{patient?.name ?? consultation.patient_claim_name ?? consultation.synthetic_patient_ref}</h1>
           <p className="wa-meta">
             {dateTime(consultation.scheduled_at)} · {language}
             {patient && ` · ${patient.phone ?? patient.email}`}
@@ -236,7 +236,12 @@ function ConsultationView({ userId }: { userId: string }) {
 
       {status !== "consent_withdrawn" && <PatientPanel consultation={consultation} patient={patient} onChanged={load} />}
 
-      {status !== "consent_withdrawn" && <DocumentsPanel consultationId={consultation.id} patient={patient} onChanged={load} />}
+      {status !== "consent_withdrawn" && <DocumentsPanel consultationId={consultation.id} patient={patient}
+        claim={consultation.patient_claim_name ? {
+          name: consultation.patient_claim_name,
+          contact: consultation.patient_claim_phone ?? consultation.patient_claim_email ?? "",
+        } : null}
+        onChanged={load} />}
 
       <WhatsAppPanel consultationId={consultation.id} />
 

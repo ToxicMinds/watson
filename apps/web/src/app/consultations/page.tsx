@@ -19,13 +19,16 @@ import { supabase } from "@/lib/supabase";
 
 type Row = {
   id: string; synthetic_patient_ref: string; scheduled_at: string; updated_at: string;
+  patient_claim_name: string | null; patient_claim_phone: string | null; patient_claim_email: string | null;
   language: keyof typeof LANGUAGE_LABEL; status: ConsultationStatus;
   fee_cents: number | null; paid_at: string | null;
   forms: { form_answers: { machine_text: string | null }[] }[];
   patients: { name: string; phone: string | null; email: string | null } | null;
 };
 /** The patient's name once known, else the consultation's reference. */
-const who = (row: Row) => row.patients?.name ?? row.synthetic_patient_ref;
+const who = (row: Row) => row.patients?.name ?? row.patient_claim_name ?? row.synthetic_patient_ref;
+const contact = (row: Row) => row.patients?.phone ?? row.patients?.email
+  ?? row.patient_claim_phone ?? row.patient_claim_email;
 
 // Finding and ordering patients (owner, 24 Oct: "the ability to search ... sorted by patient last name").
 type Sort = "name" | "date";
@@ -35,16 +38,18 @@ function matches(row: Row, query: string): boolean {
   const wanted = plain(query.trim());
   if (!wanted) return true;
   const digits = wanted.replace(/\D/g, "");
-  return [row.patients?.name, row.patients?.email, row.synthetic_patient_ref].some((text) => text && plain(text).includes(wanted))
-    || (digits.length >= 3 && (row.patients?.phone ?? "").replace(/\D/g, "").includes(digits));
+  return [who(row), contact(row), row.synthetic_patient_ref].some((text) => text && plain(text).includes(wanted))
+    || (digits.length >= 3 && (contact(row) ?? "").replace(/\D/g, "").includes(digits));
 }
 const collator = new Intl.Collator("sk", { sensitivity: "base" });
 const lastName = (name: string) => name.trim().split(/\s+/).at(-1) ?? "";
 const newestFirst = (a: Row, b: Row) => Date.parse(b.scheduled_at) - Date.parse(a.scheduled_at);
 /** By last name, then first name; consultations without a named patient last, newest first. */
 function byLastName(a: Row, b: Row): number {
-  if (!a.patients || !b.patients) return a.patients ? -1 : b.patients ? 1 : newestFirst(a, b);
-  return collator.compare(lastName(a.patients.name), lastName(b.patients.name)) || collator.compare(a.patients.name, b.patients.name);
+  const aName = a.patients?.name ?? a.patient_claim_name;
+  const bName = b.patients?.name ?? b.patient_claim_name;
+  if (!aName || !bName) return aName ? -1 : bName ? 1 : newestFirst(a, b);
+  return collator.compare(lastName(aName), lastName(bName)) || collator.compare(aName, bName);
 }
 
 export default function ConsultationsPage() {
@@ -92,7 +97,7 @@ function Dashboard() {
     // Row-level security returns only the signed-in practitioner's consultations.
     supabase
       .from("consultations")
-      .select("id, synthetic_patient_ref, scheduled_at, updated_at, language, status, fee_cents, paid_at, forms(form_answers(machine_text)), patients(name, phone, email)")
+      .select("id, synthetic_patient_ref, patient_claim_name, patient_claim_phone, patient_claim_email, scheduled_at, updated_at, language, status, fee_cents, paid_at, forms(form_answers(machine_text)), patients(name, phone, email)")
       .filter("released", "eq", false) // an unpaid booking whose hold ran out is not the practitioner's business
       .order("scheduled_at", { ascending: false })
       .then(({ data, error }) => (error ? setFailed(true) : setRows(data as unknown as Row[])));
@@ -271,11 +276,11 @@ function Case({ row }: { row: Row }) {
   return (
     <Link href={formReady ? `/form/?id=${row.id}` : `/consultation/?id=${row.id}`} className={`wa-case ${edge}`}>
       <div className="wa-case__top">
-        <span className={row.patients ? "wa-case__name" : "wa-case__ref"}>{row.patients?.name ?? "Patient not named yet"}</span>
+        <span className={row.patients || row.patient_claim_name ? "wa-case__name" : "wa-case__ref"}>{row.patients?.name ?? row.patient_claim_name ?? "Patient not named yet"}</span>
         <StatusChip status={row.status} />
       </div>
       <p className="wa-case__meta">{[dateTime(row.scheduled_at), LANGUAGE_LABEL[row.language], fee,
-        row.patients ? row.patients.phone ?? row.patients.email : row.synthetic_patient_ref].filter(Boolean).join(" · ")}</p>
+        contact(row) ?? row.synthetic_patient_ref].filter(Boolean).join(" · ")}</p>
       <div className="wa-dots" aria-hidden>
         {stages.map((state, index) => <span key={index} className={state === "pending" ? undefined : `is-${state}`} />)}
       </div>

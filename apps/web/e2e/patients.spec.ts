@@ -2,7 +2,7 @@
 // doctor would need a better way to determine the patient ... search ... sorted by patient last name").
 import { createClient } from "@supabase/supabase-js";
 import { expect, signIn, test } from "./account";
-import { localStack } from "../tests/local-stack";
+import { localStack, rpc, sqlAsOwner } from "../tests/local-stack";
 
 /** The signed-in practitioner's own database client, to prepare consultations quickly. */
 async function as(account: { email: string; password: string }) {
@@ -29,7 +29,18 @@ test("a patient seen before is suggested, and their phone or email filled in", a
   const client = await as(account);
   const name = `Ema Mráz-${suffix()}`;
   const email = `ema-${suffix()}@example.com`;
-  await client.rpc("create_consultation", { p_scheduled_at: "2026-10-20T08:00:00Z", p_language: "sk", p_consent_recorded: true, p_patient_name: name, p_patient_contact: email });
+  const made = await rpc(client, "create_consultation", {
+    p_scheduled_at: "2026-10-20T08:00:00Z", p_language: "sk", p_consent_recorded: true,
+    p_patient_name: name, p_patient_contact: email,
+  });
+  const practitioner = (await client.auth.getUser()).data.user!.id;
+  const patientId = sqlAsOwner(`
+    insert into public.patients (practitioner_id, name, email)
+    values ('${practitioner}', '${name}', '${email}') returning id;
+  `).split("\n")[0]!;
+  expect(await rpc(client, "patient_review_association", {
+    p_consultation_id: made.consultation_id, p_patient_id: patientId, p_decision: "confirm",
+  })).toMatchObject({ ok: true });
   await signIn(page, account);
   await page.getByRole("link", { name: "New consultation" }).first().click();
   await expect(page.locator(`#patients option[value="${name}"]`)).toHaveCount(1);

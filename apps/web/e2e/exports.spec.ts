@@ -68,7 +68,7 @@ test("one consultation is printed, or saved as PDF, from a clean page with one P
   await expect(page.getByRole("heading", { name: "Ema Mráz", level: 1 })).toBeVisible();
   await expect(page.getByText("Wakes at three every night")).toBeVisible();
   await expect(page.getByText("Private notes")).toBeVisible();
-  await expect(page.getByText("I wake at three every night.")).toBeVisible();
+  await expect(page.getByText("I wake at three every night.").first()).toBeVisible();
   await page.evaluate(() => { window.print = () => { document.body.dataset.printed = "yes"; }; });
   await page.getByRole("button", { name: "Print or save as PDF" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-printed", "yes");

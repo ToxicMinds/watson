@@ -14,25 +14,29 @@ type Document = Pick<Tables<"patient_documents">,
   "id" | "consultation_id" | "file_name" | "media_type" | "source" | "uploaded_at" | "reading" | "page_texts" | "storage_path" | "removed_at" | "cleanup_completed_at"
 > & { consultations: { scheduled_at: string } | null };
 
-async function fetchDocuments(patientId: string): Promise<Document[]> {
-  const { data } = await supabase.from("patient_documents")
+async function fetchDocuments(consultationId: string, patientId?: string): Promise<Document[]> {
+  let query = supabase.from("patient_documents")
     .select("id, consultation_id, file_name, media_type, source, uploaded_at, reading, page_texts, storage_path, removed_at, cleanup_completed_at, consultations(scheduled_at)")
-    .eq("patient_id", patientId).not("uploaded_at", "is", null).order("uploaded_at", { ascending: false });
+    .not("uploaded_at", "is", null).order("uploaded_at", { ascending: false });
+  query = patientId ? query.eq("patient_id", patientId) : query.eq("consultation_id", consultationId);
+  const { data } = await query;
   return (data ?? []) as Document[];
 }
 
 const FROM: Record<string, string> = { patient: "sent by the patient", practitioner: "added by you", whatsapp: "sent on WhatsApp" };
 
 /** Who the patient is, and every document they or you added, with what Watson could read. */
-export function DocumentsPanel({ consultationId, patient, onChanged }: {
+export function DocumentsPanel({ consultationId, patient, claim, onChanged }: {
   consultationId: string;
   patient: Patient | null;
+  claim: { name: string; contact: string } | null;
   onChanged: () => void;
 }) {
   const [loaded, setDocuments] = useState<Document[] | null>(null);
-  const [editing, setEditing] = useState(patient === null);
-  const [name, setName] = useState(patient?.name ?? "");
-  const [contact, setContact] = useState(patient?.phone ?? patient?.email ?? "");
+  const identity = patient ? { name: patient.name, contact: patient.phone ?? patient.email ?? "" } : claim;
+  const [editing, setEditing] = useState(identity === null);
+  const [name, setName] = useState(identity?.name ?? "");
+  const [contact, setContact] = useState(identity?.contact ?? "");
   const [fieldError, setFieldError] = useState<{ field: string; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
@@ -41,17 +45,16 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
 
   const patientId = patient?.id;
   const load = useCallback(() => {
-    if (patientId) void fetchDocuments(patientId).then(setDocuments);
-  }, [patientId]);
+    void fetchDocuments(consultationId, patientId).then(setDocuments);
+  }, [consultationId, patientId]);
 
   useEffect(() => {
-    if (!patientId) return;
     let current = true;
-    fetchDocuments(patientId).then((result) => current && setDocuments(result));
+    fetchDocuments(consultationId, patientId).then((result) => current && setDocuments(result));
     return () => {
       current = false;
     };
-  }, [patientId]);
+  }, [consultationId, patientId]);
 
   // While Watson is reading something, look again every few seconds.
   const reading = loaded?.some((document) => document.removed_at === null
@@ -123,7 +126,7 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
   }
 
   const error = (field: string) => fieldError?.field === field ? fieldError.message : null;
-  const documents = patient ? loaded : [];
+  const documents = loaded;
   const activeDocuments = documents?.filter((document) => document.removed_at === null) ?? [];
   const fromPatient = activeDocuments.filter((document) => document.source !== "practitioner").length;
   const read = activeDocuments.filter((document) => document.reading === "read").length;
@@ -139,7 +142,7 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
             </ul>
           )}
         </div>
-        {patient && !editing && (
+        {identity && !editing && (
           <button type="button" className="wa-button wa-button--secondary wa-button--small" disabled={busy} onClick={() => picker.current?.click()}>
             <Plus aria-hidden className="wa-icon wa-icon--sm" />Add a document
           </button>
@@ -150,7 +153,7 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
       {editing ? (
         <form className="wa-form" style={{ gap: 12 }} onSubmit={(event) => { event.preventDefault(); void savePatient(); }}>
           <p className="wa-text">
-            {patient ? "Change the patient\u2019s name, phone number or email." :
+            {identity ? "Change the details submitted for this consultation." :
               "Who is the patient? The patient can also fill this in from their link. Their documents are kept under their phone number or email."}
           </p>
           <div className="wa-field">
@@ -167,12 +170,12 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
           </div>
           <div className="wa-actions">
             <button type="submit" className="wa-button wa-button--primary" disabled={busy}>Save patient</button>
-            {patient && <button type="button" className="wa-button wa-button--quiet" onClick={() => setEditing(false)}>Cancel</button>}
+            {identity && <button type="button" className="wa-button wa-button--quiet" onClick={() => setEditing(false)}>Cancel</button>}
           </div>
         </form>
-      ) : patient && (
+      ) : identity && (
         <p className="wa-meta" style={{ margin: 0 }}>
-          {patient.name} · {patient.phone ?? patient.email}{" "}
+          {identity.name} · {identity.contact}{" "}
           <button type="button" className="wa-button wa-button--quiet wa-button--small" onClick={() => setEditing(true)}>Change</button>
         </p>
       )}
@@ -224,7 +227,7 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
           ))}
         </ul>
       )}
-      {documents && documents.length === 0 && patient && !editing && (
+      {documents && documents.length === 0 && identity && !editing && (
         <p className="wa-text">No documents yet. The patient can send them from their link.</p>
       )}
       {problem && <Notice tone="failed" title="That did not work">{problem}</Notice>}
