@@ -99,9 +99,13 @@ async function issue(email: string, ip: string): Promise<{ status: number; body:
     await sendCode(email, code);
   } catch {
     // Revoke the unsent challenge by locking it. Do not expose mail-provider details.
-    await admin.rpc("cancel_patient_otp_challenge", {
-      p_contact_hash: contactHash, p_code_hash: codeHash,
-    }).catch(() => null);
+    try {
+      await admin.rpc("cancel_patient_otp_challenge", {
+        p_contact_hash: contactHash, p_code_hash: codeHash,
+      });
+    } catch {
+      // Keep the mail failure generic if challenge cancellation is also unavailable.
+    }
     return { status: 503, body: { ok: false, error: "MAIL_UNAVAILABLE" } };
   }
   return { status: 200, body: { ok: true } };

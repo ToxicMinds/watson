@@ -233,12 +233,12 @@ describe("booking a time", () => {
 });
 
 describe("finding a practitioner", () => {
-  it("lists pages with hours, with their next free time; a page without hours is not listed", async () => {
+  it("lists every page, with the next free time when one is available", async () => {
     const closed = await newPractitioner(stack, "closed");
     const closedSlug = await openPage(closed, { p_hours: {} });
     const answer = await rpc(patient, "find_practitioners", {});
     const listed = answer.practitioners as { slug: string; next_free: string | null }[];
-    expect(listed.map((p) => p.slug)).not.toContain(closedSlug);
+    expect(listed.find((p) => p.slug === closedSlug)).toMatchObject({ slug: closedSlug, next_free: null });
     const mine = listed.find((p) => p.slug === evaSlug)!;
     expect(mine).toMatchObject({ display_name: "Dr. Eva Test", offer: "Ayurveda · sleep", languages: ["en", "sk"], length_minutes: 45, fee_cents: 4000 });
     expect(local(mine.next_free!)).toMatch(/ 09:00$/);
