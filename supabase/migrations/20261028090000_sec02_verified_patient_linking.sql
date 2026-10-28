@@ -367,28 +367,6 @@ begin
     if nullif(v_name, '') is not null then
       v_claim := private.identify_patient(v_consultation, p_patient_name, p_patient_contact);
       if not (v_claim ->> 'ok')::boolean then raise exception using errcode = 'W0001'; end if;
-      if position('@' in coalesce(p_patient_contact, '')) > 0 then
-        v_email := private.normal_email(p_patient_contact);
-      else
-        v_phone := private.normal_phone(p_patient_contact);
-      end if;
-      select p.id into v_patient from public.patients p
-      where p.practitioner_id = v_user and (p.phone = v_phone or p.email = v_email);
-      if v_patient is null then
-        begin
-          insert into public.patients(practitioner_id, name, phone, email)
-          values (v_user, v_name, v_phone, v_email) returning id into v_patient;
-        exception when unique_violation then
-          select p.id into v_patient from public.patients p
-          where p.practitioner_id = v_user and (p.phone = v_phone or p.email = v_email);
-        end;
-      end if;
-      update public.consultations set patient_id = v_patient,
-        patient_association_state = 'practitioner_confirmed', patient_associated_at = now(),
-        patient_associated_by = v_user, updated_at = now()
-      where id = v_consultation.id;
-      perform private.log_event(v_consultation.id, 'patient.association_confirmed', v_user::text,
-        'practitioner', 'consultation', v_consultation.id, 'success', '{}'::jsonb);
     end if;
   exception when sqlstate 'W0001' then
     return v_claim;
