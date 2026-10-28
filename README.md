@@ -37,6 +37,21 @@ Patient payment needs a Stripe test key on the hosted project (`supabase secrets
 STRIPE_SECRET_KEY=... STRIPE_WEBHOOK_SECRET=... SITE_URLS=https://watson-assists.onrender.com`)
 and a webhook endpoint at `<project>/functions/v1/stripe-webhook` (decision 0007).
 
+Patient email OTP requires a Watson-owned Google OAuth refresh token with only the Gmail
+`gmail.send` scope. Enable Gmail API in the owner's Google Cloud project and authorize the
+Watson sender account for offline access. Keep OAuth credentials out of chat, git, and shell
+arguments. Once `.envrc` provides `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF`, run
+`scripts/configure-patient-otp-secrets.sh`; it prompts for credentials without echo, generates
+a fresh HMAC pepper, writes secrets only to a mode-600 temporary file, and uploads them through
+the Supabase CLI. It prints no secret values. Never reuse the Calendar refresh token: it has a
+different scope. After migrations are reviewed/applied, deploy with
+`supabase functions deploy patient-otp --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt`.
+Then export the hosted public URL/key and run `scripts/smoke-patient-otp.py`. It prompts for a
+synthetic inbox and code without echoing the code, checks the resulting normal session has only
+the patient role, signs that test session out, and never prints or stores session tokens. Do not
+use a real patient's address. Complete this smoke test before enabling patient sign-in.
+Full gated rollout steps and rollback notes: [SEC-02 DevOps handoff](docs/sec-02-patient-otp-devops-handoff.md).
+
 ## Run all of Watson on one computer
 
     scripts/local.sh setup && scripts/local.sh start     # then http://localhost:3000

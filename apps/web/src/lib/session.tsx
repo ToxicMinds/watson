@@ -37,15 +37,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      let roles = current.data ?? [];
-      if (roles.length === 0) {
-        const provisioned = await supabase.rpc("bootstrap_patient_role");
-        if (provisioned.data && typeof provisioned.data === "object" && "ok" in provisioned.data
-          && provisioned.data.ok === true && "roles" in provisioned.data
-          && Array.isArray(provisioned.data.roles)) {
-          roles = provisioned.data.roles as string[];
-        }
-      }
+      const roles = current.data ?? [];
       if (!active) return;
       setState((state) => state.status === "signed-in" && state.user.id === userId
         ? { ...state, roles }

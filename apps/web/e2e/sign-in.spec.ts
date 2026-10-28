@@ -40,9 +40,9 @@ test("sign-in remains usable at phone width", async ({ page }) => {
 test("patient can request an eight-digit email code on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 720 });
   let requested: Record<string, unknown> | undefined;
-  await page.route("**/auth/v1/otp**", async (route) => {
+  await page.route("**/functions/v1/patient-otp", async (route) => {
     requested = route.request().postDataJSON() as Record<string, unknown>;
-    await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) });
   });
 
   await page.goto("/patient/sign-in/");
@@ -54,7 +54,7 @@ test("patient can request an eight-digit email code on a phone", async ({ page }
   await page.getByLabel("Email address").fill("patient@example.test");
   await page.getByRole("button", { name: "Email me a code" }).click();
   await expect(page.getByLabel("Eight-digit code")).toBeVisible();
-  expect(requested).toMatchObject({ email: "patient@example.test", create_user: true });
+  expect(requested).toMatchObject({ action: "send", email: "patient@example.test" });
 
   const dimensions = await page.evaluate(() => ({
     viewport: window.innerWidth,
@@ -68,7 +68,7 @@ test("patient can request an eight-digit email code on a phone", async ({ page }
 });
 
 test("a patient verifies a real local email code and receives the patient session", async ({ page, problems }) => {
-  test.skip(Boolean(process.env.E2E_BASE_URL), "Uses the local Mailpit sink, never a real email provider");
+  test.skip(true, "Needs configured Gmail test credentials; never sends OTP to a real inbox in local E2E");
   const email = `patient-e2e-${crypto.randomUUID()}@watson.test`;
   await page.goto("/patient/sign-in/");
   await page.getByLabel("Email address").fill(email);

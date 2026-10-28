@@ -48,7 +48,7 @@ test("a direct booking link with no saved hours shows no dates or times", async 
 
   await page.goto(`/book/?p=${saved.slug}`);
   await expect(page.getByRole("heading", { name: "Dr. Closed Schedule", level: 1 })).toBeVisible();
-  await expect(page.getByText("No free times in the next 4 weeks.")).toBeVisible();
+  await expect(page.getByText("Dr. Closed Schedule is not taking appointments at the moment.")).toBeVisible();
   await expect(page.getByRole("list", { name: "Days" })).toHaveCount(0);
   await expect(page.getByRole("group", { name: /Times on/ })).toHaveCount(0);
 });

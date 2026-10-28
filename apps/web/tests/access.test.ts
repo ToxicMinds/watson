@@ -102,7 +102,7 @@ describe("a signed-out visitor", () => {
 });
 
 describe("a patient account", () => {
-  it("can be provisioned as a patient after Auth has verified its email", async () => {
+  it("cannot provision itself through a public Auth session", async () => {
     const email = `new-patient-${crypto.randomUUID()}@watson.test`;
     const created = await adminClient(stack).auth.admin.createUser({ email, password: PASSWORD, email_confirm: true });
     expect(created.error).toBeNull();
@@ -110,14 +110,45 @@ describe("a patient account", () => {
     const signedIn = await patient.auth.signInWithPassword({ email, password: PASSWORD });
     expect(signedIn.error).toBeNull();
 
-    const { data, error } = await patient.rpc("bootstrap_patient_role" as never, {} as never);
+    const { error } = await patient.rpc("provision_patient_role_after_otp" as never, {
+      p_user_id: created.data.user!.id,
+    } as never);
+    expect(error).not.toBeNull();
+    expect((await patient.rpc("current_user_roles")).data).toEqual([]);
+  });
+
+  it("can be provisioned only through the trusted service role after email verification", async () => {
+    const email = `verified-patient-${crypto.randomUUID()}@watson.test`;
+    const created = await adminClient(stack).auth.admin.createUser({ email, password: PASSWORD, email_confirm: true });
+    expect(created.error).toBeNull();
+    const { data, error } = await adminClient(stack).rpc("provision_patient_role_after_otp" as never, {
+      p_user_id: created.data.user!.id,
+    } as never);
     expect(error).toBeNull();
     expect(data).toEqual({ ok: true, roles: ["patient"] });
+
+    const patient = browserClient(stack);
+    const signedIn = await patient.auth.signInWithPassword({ email, password: PASSWORD });
+    expect(signedIn.error).toBeNull();
+    const payload = signedIn.data.session!.access_token.split(".")[1]!.replace(/-/g, "+").replace(/_/g, "/");
+    const sessionId = JSON.parse(atob(payload.padEnd(Math.ceil(payload.length / 4) * 4, "="))).session_id as string;
+    expect((await patient.rpc("current_user_roles")).data).toEqual([]);
+
+    const registered = await adminClient(stack).rpc("register_patient_otp_session" as never, {
+      p_user_id: created.data.user!.id, p_session_id: sessionId,
+    } as never);
+    expect(registered.error).toBeNull();
+    expect(registered.data).toEqual({ ok: true });
+    expect((await patient.rpc("current_user_roles")).data).toEqual(["patient"]);
+    const refreshed = await patient.auth.refreshSession();
+    expect(refreshed.error).toBeNull();
     expect((await patient.rpc("current_user_roles")).data).toEqual(["patient"]);
   });
 
   it("does not add patient role to a practitioner account", async () => {
-    const { data, error } = await anna.client.rpc("bootstrap_patient_role" as never, {} as never);
+    const { data, error } = await adminClient(stack).rpc("provision_patient_role_after_otp" as never, {
+      p_user_id: anna.id,
+    } as never);
     expect(error).toBeNull();
     expect(data).toEqual({ ok: false, error_category: "ROLE_ALREADY_ASSIGNED" });
     expect((await anna.client.rpc("current_user_roles")).data).toEqual(["practitioner"]);
@@ -129,6 +160,13 @@ describe("a patient account", () => {
       delete from private.user_roles where user_id = '${patient.id}' and role = 'practitioner';
       insert into private.user_roles (user_id, role) values ('${patient.id}', 'patient');
     `);
+    const currentSession = (await patient.client.auth.getSession()).data.session!;
+    const sessionPayload = currentSession.access_token.split(".")[1]!.replace(/-/g, "+").replace(/_/g, "/");
+    const sessionId = JSON.parse(atob(sessionPayload.padEnd(Math.ceil(sessionPayload.length / 4) * 4, "="))).session_id as string;
+    const admitted = await adminClient(stack).rpc("register_patient_otp_session" as never, {
+      p_user_id: patient.id, p_session_id: sessionId,
+    } as never);
+    expect(admitted.error).toBeNull();
     expect((await patient.client.rpc("current_user_roles")).data).toEqual(["patient"]);
     expect((await anna.client.rpc("current_user_roles")).data).toEqual(["practitioner"]);
     const ownConsultation = sqlAsOwner(`
