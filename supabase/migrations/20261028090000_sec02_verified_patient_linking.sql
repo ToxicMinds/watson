@@ -308,6 +308,104 @@ $$;
 revoke all on function public.patient_review_association(uuid, uuid, text) from public, anon, service_role;
 grant execute on function public.patient_review_association(uuid, uuid, text) to authenticated;
 
+-- Entering patient details while authenticated as the consultation's
+-- practitioner is an explicit practitioner confirmation. Unlike bearer-link
+-- input, it may create or select the practitioner's canonical patient row.
+create or replace function public.create_consultation(
+  p_scheduled_at timestamptz,
+  p_language public.consultation_language,
+  p_consent_recorded boolean,
+  p_scenario_notes text default '',
+  p_fee_cents int default null,
+  p_synthetic_patient_ref text default null,
+  p_patient_name text default null,
+  p_patient_contact text default null
+) returns jsonb
+language plpgsql security definer set search_path = ''
+as $$
+declare
+  v_user uuid := (select auth.uid());
+  v_consultation public.consultations;
+  v_claim jsonb;
+  v_patient uuid;
+  v_name text := btrim(coalesce(p_patient_name, ''));
+  v_phone text;
+  v_email text;
+  v_status public.consultation_status := case when p_consent_recorded
+    then 'ready_for_audio'::public.consultation_status
+    else 'consent_pending'::public.consultation_status end;
+begin
+  if v_user is null then return private.refuse('NOT_SIGNED_IN'); end if;
+  if not private.is_practitioner() or private.is_engine() then
+    return private.refuse('NOT_A_PRACTITIONER');
+  end if;
+  if p_synthetic_patient_ref is not null and p_synthetic_patient_ref !~ '^SYN-[0-9]{1,8}$' then
+    return private.refuse('VALIDATION', 'synthetic_patient_ref');
+  end if;
+  if p_scheduled_at is null then return private.refuse('VALIDATION', 'scheduled_at'); end if;
+  if char_length(coalesce(p_scenario_notes, '')) > 500 then
+    return private.refuse('VALIDATION', 'scenario_notes');
+  end if;
+  if p_fee_cents is not null and p_fee_cents not between 50 and 100000 then
+    return private.refuse('VALIDATION', 'fee_cents');
+  end if;
+  if (nullif(v_name, '') is null)
+    <> (nullif(btrim(coalesce(p_patient_contact, '')), '') is null) then
+    return private.refuse('VALIDATION', 'patient');
+  end if;
+
+  begin
+    insert into public.consultations (
+      practitioner_id, synthetic_patient_ref, scheduled_at, language, status,
+      consent_recorded_at, consent_recorded_by, scenario_notes, fee_cents
+    ) values (
+      v_user, coalesce(p_synthetic_patient_ref, private.new_reference()), p_scheduled_at,
+      p_language, v_status, case when p_consent_recorded then now() end,
+      case when p_consent_recorded then v_user end, coalesce(p_scenario_notes, ''), p_fee_cents
+    ) returning * into v_consultation;
+
+    if nullif(v_name, '') is not null then
+      v_claim := private.identify_patient(v_consultation, p_patient_name, p_patient_contact);
+      if not (v_claim ->> 'ok')::boolean then raise exception using errcode = 'W0001'; end if;
+      if position('@' in coalesce(p_patient_contact, '')) > 0 then
+        v_email := private.normal_email(p_patient_contact);
+      else
+        v_phone := private.normal_phone(p_patient_contact);
+      end if;
+      select p.id into v_patient from public.patients p
+      where p.practitioner_id = v_user and (p.phone = v_phone or p.email = v_email);
+      if v_patient is null then
+        begin
+          insert into public.patients(practitioner_id, name, phone, email)
+          values (v_user, v_name, v_phone, v_email) returning id into v_patient;
+        exception when unique_violation then
+          select p.id into v_patient from public.patients p
+          where p.practitioner_id = v_user and (p.phone = v_phone or p.email = v_email);
+        end;
+      end if;
+      update public.consultations set patient_id = v_patient,
+        patient_association_state = 'practitioner_confirmed', patient_associated_at = now(),
+        patient_associated_by = v_user, updated_at = now()
+      where id = v_consultation.id;
+      perform private.log_event(v_consultation.id, 'patient.association_confirmed', v_user::text,
+        'practitioner', 'consultation', v_consultation.id, 'success', '{}'::jsonb);
+    end if;
+  exception when sqlstate 'W0001' then
+    return v_claim;
+  end;
+
+  perform private.log_event(v_consultation.id, 'consultation.created', v_user::text,
+    'practitioner', 'consultation', v_consultation.id, 'success',
+    jsonb_build_object('to_status', v_status));
+  if p_consent_recorded then
+    perform private.log_event(v_consultation.id, 'consent.recorded', v_user::text,
+      'practitioner', 'consultation', v_consultation.id, 'success', '{}'::jsonb);
+  end if;
+  return jsonb_build_object('ok', true, 'consultation_id', v_consultation.id,
+    'status', v_status, 'invite_token', v_consultation.invite_token);
+end;
+$$;
+
 -- Booking still applies its existing contact-based hold budget (SEC-04 remains
 -- separate), but that comparison is now against claims and cannot attach a row.
 create or replace function public.book_time(
