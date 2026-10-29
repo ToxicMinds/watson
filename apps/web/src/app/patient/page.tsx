@@ -36,7 +36,11 @@ export default function PatientHome() {
             <div className="wa-pagehead__text">
               <p className="wa-hero__eyebrow wa-voice--patient">Patient account</p>
               <h1 className="wa-title">You’re signed in</h1>
-              <p className="wa-meta">Verified email: <strong>{session.user.email}</strong></p>
+              <p className="wa-meta">
+                {session.user.phone
+                  ? <>Verified WhatsApp number: <strong>+{session.user.phone.replace(/^\+/, "")}</strong></>
+                  : <>Verified email: <strong>{session.user.email}</strong></>}
+              </p>
             </div>
             <button type="button" className="wa-button wa-button--secondary" disabled={signingOut} onClick={() => void signOut()}>
               {signingOut ? "Signing out…" : "Sign out"}

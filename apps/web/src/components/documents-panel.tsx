@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "reac
 import { Notice } from "@/components/status";
 import { call, explain, FIELD_MESSAGE } from "@/lib/api";
 import type { Tables } from "@/lib/database.types";
+import type { Person } from "@/lib/patient";
 import { DOCUMENT_ACCEPT, openDocument, sendDocument } from "@/lib/documents";
 import { dateTime, dayMonth } from "@/lib/status";
 import { supabase } from "@/lib/supabase";
@@ -14,25 +15,31 @@ type Document = Pick<Tables<"patient_documents">,
   "id" | "consultation_id" | "file_name" | "media_type" | "source" | "uploaded_at" | "reading" | "page_texts" | "storage_path" | "removed_at" | "cleanup_completed_at"
 > & { consultations: { scheduled_at: string } | null };
 
-async function fetchDocuments(patientId: string): Promise<Document[]> {
+/** This consultation's documents, and once the patient is confirmed, those from their other visits too (SEC-02). */
+async function fetchDocuments(consultationId: string, patientId: string | undefined): Promise<Document[]> {
   const { data } = await supabase.from("patient_documents")
     .select("id, consultation_id, file_name, media_type, source, uploaded_at, reading, page_texts, storage_path, removed_at, cleanup_completed_at, consultations(scheduled_at)")
-    .eq("patient_id", patientId).not("uploaded_at", "is", null).order("uploaded_at", { ascending: false });
+    .or(patientId ? `consultation_id.eq.${consultationId},patient_id.eq.${patientId}` : `consultation_id.eq.${consultationId}`)
+    .not("uploaded_at", "is", null).order("uploaded_at", { ascending: false });
   return (data ?? []) as Document[];
 }
 
 const FROM: Record<string, string> = { patient: "sent by the patient", practitioner: "added by you", whatsapp: "sent on WhatsApp" };
 
-/** Who the patient is, and every document they or you added, with what Watson could read. */
-export function DocumentsPanel({ consultationId, patient, onChanged }: {
+/**
+ * Who the patient is, and every document they or you added, with what Watson could read. `patient` is the
+ * confirmed record; `person` is who the consultation is with as shown, which may still be what they typed.
+ */
+export function DocumentsPanel({ consultationId, patient, person, onChanged }: {
   consultationId: string;
   patient: Patient | null;
+  person: Person | null;
   onChanged: () => void;
 }) {
   const [loaded, setDocuments] = useState<Document[] | null>(null);
-  const [editing, setEditing] = useState(patient === null);
-  const [name, setName] = useState(patient?.name ?? "");
-  const [contact, setContact] = useState(patient?.phone ?? patient?.email ?? "");
+  const [editing, setEditing] = useState(person === null);
+  const [name, setName] = useState(person?.name ?? "");
+  const [contact, setContact] = useState(person?.phone ?? person?.email ?? "");
   const [fieldError, setFieldError] = useState<{ field: string; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
@@ -41,17 +48,16 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
 
   const patientId = patient?.id;
   const load = useCallback(() => {
-    if (patientId) void fetchDocuments(patientId).then(setDocuments);
-  }, [patientId]);
+    void fetchDocuments(consultationId, patientId).then(setDocuments);
+  }, [consultationId, patientId]);
 
   useEffect(() => {
-    if (!patientId) return;
     let current = true;
-    fetchDocuments(patientId).then((result) => current && setDocuments(result));
+    fetchDocuments(consultationId, patientId).then((result) => current && setDocuments(result));
     return () => {
       current = false;
     };
-  }, [patientId]);
+  }, [consultationId, patientId]);
 
   // While Watson is reading something, look again every few seconds.
   const reading = loaded?.some((document) => document.removed_at === null
@@ -123,7 +129,7 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
   }
 
   const error = (field: string) => fieldError?.field === field ? fieldError.message : null;
-  const documents = patient ? loaded : [];
+  const documents = loaded;
   const activeDocuments = documents?.filter((document) => document.removed_at === null) ?? [];
   const fromPatient = activeDocuments.filter((document) => document.source !== "practitioner").length;
   const read = activeDocuments.filter((document) => document.reading === "read").length;
@@ -139,7 +145,7 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
             </ul>
           )}
         </div>
-        {patient && !editing && (
+        {person && !editing && (
           <button type="button" className="wa-button wa-button--secondary wa-button--small" disabled={busy} onClick={() => picker.current?.click()}>
             <Plus aria-hidden className="wa-icon wa-icon--sm" />Add a document
           </button>
@@ -150,7 +156,7 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
       {editing ? (
         <form className="wa-form" style={{ gap: 12 }} onSubmit={(event) => { event.preventDefault(); void savePatient(); }}>
           <p className="wa-text">
-            {patient ? "Change the patient\u2019s name, phone number or email." :
+            {person ? "Change the patient\u2019s name, phone number or email." :
               "Who is the patient? The patient can also fill this in from their link. Their documents are kept under their phone number or email."}
           </p>
           <div className="wa-field">
@@ -167,12 +173,12 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
           </div>
           <div className="wa-actions">
             <button type="submit" className="wa-button wa-button--primary" disabled={busy}>Save patient</button>
-            {patient && <button type="button" className="wa-button wa-button--quiet" onClick={() => setEditing(false)}>Cancel</button>}
+            {person && <button type="button" className="wa-button wa-button--quiet" onClick={() => setEditing(false)}>Cancel</button>}
           </div>
         </form>
-      ) : patient && (
+      ) : person && (
         <p className="wa-meta" style={{ margin: 0 }}>
-          {patient.name} · {patient.phone ?? patient.email}{" "}
+          {person.name} · {person.phone ?? person.email}{" "}
           <button type="button" className="wa-button wa-button--quiet wa-button--small" onClick={() => setEditing(true)}>Change</button>
         </p>
       )}
@@ -224,7 +230,7 @@ export function DocumentsPanel({ consultationId, patient, onChanged }: {
           ))}
         </ul>
       )}
-      {documents && documents.length === 0 && patient && !editing && (
+      {documents && documents.length === 0 && person && !editing && (
         <p className="wa-text">No documents yet. The patient can send them from their link.</p>
       )}
       {problem && <Notice tone="failed" title="That did not work">{problem}</Notice>}

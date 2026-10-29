@@ -13,7 +13,8 @@ import { clockTime, viewerZone, type Week } from "@/lib/booking";
 import { downloadAll } from "@/lib/download";
 import { engineStatus, type Engine } from "@/lib/engine";
 import { dateTime, LANGUAGE_LABEL, summarise } from "@/lib/status";
-import { loadRecords } from "@/lib/records";
+import { PATIENT_COLUMNS, shownPatient, type PatientColumns, type Shown } from "@/lib/patient";
+import { earlierPatients, loadRecords } from "@/lib/records";
 import { RequireSession } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 
@@ -22,10 +23,9 @@ type Row = {
   language: keyof typeof LANGUAGE_LABEL; status: ConsultationStatus;
   fee_cents: number | null; paid_at: string | null;
   forms: { form_answers: { machine_text: string | null }[] }[];
-  patients: { name: string; phone: string | null; email: string | null } | null;
-};
+} & PatientColumns & { person: Shown | null };
 /** The patient's name once known, else the consultation's reference. */
-const who = (row: Row) => row.patients?.name ?? row.synthetic_patient_ref;
+const who = (row: Row) => row.person?.name ?? row.synthetic_patient_ref;
 
 // Finding and ordering patients (owner, 24 Oct: "the ability to search ... sorted by patient last name").
 type Sort = "name" | "date";
@@ -35,16 +35,16 @@ function matches(row: Row, query: string): boolean {
   const wanted = plain(query.trim());
   if (!wanted) return true;
   const digits = wanted.replace(/\D/g, "");
-  return [row.patients?.name, row.patients?.email, row.synthetic_patient_ref].some((text) => text && plain(text).includes(wanted))
-    || (digits.length >= 3 && (row.patients?.phone ?? "").replace(/\D/g, "").includes(digits));
+  return [row.person?.name, row.person?.email, row.synthetic_patient_ref].some((text) => text && plain(text).includes(wanted))
+    || (digits.length >= 3 && (row.person?.phone ?? "").replace(/\D/g, "").includes(digits));
 }
 const collator = new Intl.Collator("sk", { sensitivity: "base" });
 const lastName = (name: string) => name.trim().split(/\s+/).at(-1) ?? "";
 const newestFirst = (a: Row, b: Row) => Date.parse(b.scheduled_at) - Date.parse(a.scheduled_at);
 /** By last name, then first name; consultations without a named patient last, newest first. */
 function byLastName(a: Row, b: Row): number {
-  if (!a.patients || !b.patients) return a.patients ? -1 : b.patients ? 1 : newestFirst(a, b);
-  return collator.compare(lastName(a.patients.name), lastName(b.patients.name)) || collator.compare(a.patients.name, b.patients.name);
+  if (!a.person || !b.person) return a.person ? -1 : b.person ? 1 : newestFirst(a, b);
+  return collator.compare(lastName(a.person.name), lastName(b.person.name)) || collator.compare(a.person.name, b.person.name);
 }
 
 export default function ConsultationsPage() {
@@ -92,10 +92,15 @@ function Dashboard() {
     // Row-level security returns only the signed-in practitioner's consultations.
     supabase
       .from("consultations")
-      .select("id, synthetic_patient_ref, scheduled_at, updated_at, language, status, fee_cents, paid_at, forms(form_answers(machine_text)), patients(name, phone, email)")
+      .select(`id, synthetic_patient_ref, scheduled_at, updated_at, language, status, fee_cents, paid_at, forms(form_answers(machine_text)), ${PATIENT_COLUMNS}`)
       .filter("released", "eq", false) // an unpaid booking whose hold ran out is not the practitioner's business
       .order("scheduled_at", { ascending: false })
-      .then(({ data, error }) => (error ? setFailed(true) : setRows(data as unknown as Row[])));
+      .then(async ({ data, error }) => {
+        if (error) return setFailed(true);
+        const loaded = data as unknown as Row[];
+        const earlier = await earlierPatients(loaded);
+        setRows(loaded.map((row) => ({ ...row, person: shownPatient(row, earlier) })));
+      });
     engineStatus().then(setEngine);
     const start = new Date();
     const midnight = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
@@ -271,11 +276,12 @@ function Case({ row }: { row: Row }) {
   return (
     <Link href={formReady ? `/form/?id=${row.id}` : `/consultation/?id=${row.id}`} className={`wa-case ${edge}`}>
       <div className="wa-case__top">
-        <span className={row.patients ? "wa-case__name" : "wa-case__ref"}>{row.patients?.name ?? "Patient not named yet"}</span>
+        <span className={row.person ? "wa-case__name" : "wa-case__ref"}>{row.person?.name ?? "Patient not named yet"}</span>
         <StatusChip status={row.status} />
       </div>
+      {row.person?.check && <span className="wa-chip wa-chip--attention" style={{ justifySelf: "start" }}>Check who this is</span>}
       <p className="wa-case__meta">{[dateTime(row.scheduled_at), LANGUAGE_LABEL[row.language], fee,
-        row.patients ? row.patients.phone ?? row.patients.email : row.synthetic_patient_ref].filter(Boolean).join(" · ")}</p>
+        row.person ? row.person.phone ?? row.person.email : row.synthetic_patient_ref].filter(Boolean).join(" · ")}</p>
       <div className="wa-dots" aria-hidden>
         {stages.map((state, index) => <span key={index} className={state === "pending" ? undefined : `is-${state}`} />)}
       </div>

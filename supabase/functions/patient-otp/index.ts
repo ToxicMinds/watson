@@ -1,15 +1,20 @@
 import { createClient } from "../_shared/deps.ts";
 import { admin, env, reply } from "../_shared/server.ts";
 import {
-  isPatientEmail, normalizePatientEmail, otpCodeHash, otpContactHash, otpIpHash, randomOtpCode,
+  isPatientEmail, normalizePatientEmail, normalizePatientPhone, otpCodeHash, otpContactHash, otpIpHash,
+  phoneSignInEmail, randomOtpCode, whatsappCodeMessage,
 } from "../_shared/patient-otp.ts";
 
 type ChallengeReply = { ok: boolean; error_category?: string };
+/** Where the code goes: an email address (Watson's Gmail), or a WhatsApp number (Watson's gateway, owner, 28 Oct). */
+type Contact = { kind: "email" | "phone"; value: string };
 
-const configured = () => Boolean(
-  env("PATIENT_OTP_PEPPER") && env("GOOGLE_CLIENT_ID") && env("GOOGLE_CLIENT_SECRET")
-  && env("GOOGLE_REFRESH_TOKEN") && env("PATIENT_OTP_FROM")
-  && (env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY")),
+// Each way of sending is ready only with its own settings; the pepper and the public key serve both.
+const configured = (kind: Contact["kind"]) => Boolean(
+  env("PATIENT_OTP_PEPPER") && (env("SUPABASE_ANON_KEY") || env("SUPABASE_PUBLISHABLE_KEY"))
+  && (kind === "email"
+    ? env("GOOGLE_CLIENT_ID") && env("GOOGLE_CLIENT_SECRET") && env("GOOGLE_REFRESH_TOKEN") && env("PATIENT_OTP_FROM")
+    : env("WHATSAPP_GATEWAY_URL") && env("WHATSAPP_GATEWAY_SECRET")),
 );
 
 function clientIp(request: Request): string {
@@ -50,7 +55,21 @@ async function gmailAccessToken(): Promise<string> {
   return body.access_token;
 }
 
-async function sendCode(email: string, code: string): Promise<void> {
+/** By WhatsApp: the gateway sends it at once (apps/whatsapp-gateway/send.mjs). The code is never stored. */
+async function whatsappCode(phone: string, code: string): Promise<void> {
+  const response = await fetch(`${env("WHATSAPP_GATEWAY_URL")}/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-watson-gateway": env("WHATSAPP_GATEWAY_SECRET") },
+    body: JSON.stringify({ to: phone, text: whatsappCodeMessage(code) }),
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!response.ok) throw new Error("MAIL_UNAVAILABLE");
+}
+
+const sendCode = (contact: Contact, code: string) =>
+  contact.kind === "email" ? emailCode(contact.value, code) : whatsappCode(contact.value, code);
+
+async function emailCode(email: string, code: string): Promise<void> {
   const from = env("PATIENT_OTP_FROM");
   const html = `<!doctype html><html lang="en"><body style="font-family:Arial,sans-serif;color:#161b26"><h1>Your Watson sign-in code</h1><p>Enter this one-time code to sign in. It expires in 10 minutes.</p><p style="font-family:monospace;font-size:32px;letter-spacing:.2em"><strong>${code}</strong></p><p>If you did not request this code, ignore this email. Never share it.</p></body></html>`;
   const mime = [
@@ -81,9 +100,9 @@ async function rpcChallenge(
   return data as ChallengeReply;
 }
 
-async function issue(email: string, ip: string): Promise<{ status: number; body: unknown }> {
+async function issue(contact: Contact, ip: string): Promise<{ status: number; body: unknown }> {
   const pepper = env("PATIENT_OTP_PEPPER");
-  const contactHash = await otpContactHash(pepper, email);
+  const contactHash = await otpContactHash(pepper, contact.value);
   const code = randomOtpCode();
   const ipHash = await otpIpHash(pepper, ip);
   const codeHash = await otpCodeHash(pepper, contactHash, code);
@@ -96,7 +115,7 @@ async function issue(email: string, ip: string): Promise<{ status: number; body:
   }
 
   try {
-    await sendCode(email, code);
+    await sendCode(contact, code);
   } catch {
     // Revoke the unsent challenge by locking it. Do not expose mail-provider details.
     try {
@@ -141,10 +160,14 @@ function jwtSessionId(accessToken: string): string | null {
   }
 }
 
-async function makeSession(email: string): Promise<{ access_token: string; refresh_token: string }> {
+async function makeSession(contact: Contact): Promise<{ access_token: string; refresh_token: string }> {
+  // A WhatsApp sign-in's account carries the proven number, and an address no mail reaches to open sessions.
+  const email = contact.kind === "email" ? contact.value : phoneSignInEmail(contact.value);
   let user = await existingUser(email);
   if (!user) {
-    const { data, error } = await admin.auth.admin.createUser({ email, email_confirm: true });
+    const { data, error } = await admin.auth.admin.createUser(contact.kind === "email"
+      ? { email, email_confirm: true }
+      : { email, email_confirm: true, phone: contact.value, phone_confirm: true });
     if (error || !data.user) throw new Error("AUTH_UNAVAILABLE");
     user = data.user;
   } else if (!user.email_confirmed_at) {
@@ -175,16 +198,16 @@ async function makeSession(email: string): Promise<{ access_token: string; refre
   const { data: registered, error: registrationError } = await admin.rpc("register_patient_otp_session", {
     p_user_id: user.id,
     p_session_id: sessionId,
-    p_verified_email: email,
-    p_verified_phone: null,
+    p_verified_email: contact.kind === "email" ? contact.value : null,
+    p_verified_phone: contact.kind === "phone" ? contact.value : null,
   });
   if (registrationError || !(registered as ChallengeReply | null)?.ok) throw new Error("AUTH_UNAVAILABLE");
   return { access_token: data.session.access_token, refresh_token: data.session.refresh_token };
 }
 
-async function verify(email: string, code: string, ip: string): Promise<{ status: number; body: unknown }> {
+async function verify(contact: Contact, code: string, ip: string): Promise<{ status: number; body: unknown }> {
   const pepper = env("PATIENT_OTP_PEPPER");
-  const contactHash = await otpContactHash(pepper, email);
+  const contactHash = await otpContactHash(pepper, contact.value);
   const [codeHash, ipHash] = await Promise.all([
     otpCodeHash(pepper, contactHash, code), otpIpHash(pepper, ip),
   ]);
@@ -195,7 +218,7 @@ async function verify(email: string, code: string, ip: string): Promise<{ status
     const status = result.error_category === "RATE_LIMITED" || result.error_category === "LOCKED" ? 429 : 400;
     return { status, body: { ok: false, error: result.error_category ?? "INVALID_CODE" } };
   }
-  const session = await makeSession(email);
+  const session = await makeSession(contact);
   return { status: 200, body: { ok: true, session } };
 }
 
@@ -203,22 +226,24 @@ Deno.serve(async (request) => {
   const origin = request.headers.get("Origin");
   if (request.method === "OPTIONS") return reply(origin, 204, null);
   if (request.method !== "POST") return reply(origin, 405, { error: "METHOD" });
-  if (!configured()) return reply(origin, 503, { error: "NOT_CONFIGURED" });
-
-  let payload: { action?: unknown; email?: unknown; code?: unknown };
+  let payload: { action?: unknown; email?: unknown; phone?: unknown; code?: unknown };
   try {
     payload = await request.json();
   } catch {
     return reply(origin, 400, { error: "VALIDATION" });
   }
   const email = typeof payload.email === "string" ? normalizePatientEmail(payload.email) : "";
-  if (!isPatientEmail(email)) return reply(origin, 400, { error: "VALIDATION" });
+  const phone = typeof payload.phone === "string" ? normalizePatientPhone(payload.phone) : null;
+  const contact: Contact | null = isPatientEmail(email) ? { kind: "email", value: email }
+    : phone ? { kind: "phone", value: phone } : null;
+  if (!contact) return reply(origin, 400, { error: "VALIDATION" });
+  if (!configured(contact.kind)) return reply(origin, 503, { error: "NOT_CONFIGURED" });
 
   try {
     const outcome = payload.action === "send"
-      ? await issue(email, clientIp(request))
+      ? await issue(contact, clientIp(request))
       : payload.action === "verify" && typeof payload.code === "string" && /^\d{8}$/.test(payload.code)
-        ? await verify(email, payload.code, clientIp(request))
+        ? await verify(contact, payload.code, clientIp(request))
         : { status: 400, body: { error: "VALIDATION" } };
     return reply(origin, outcome.status, outcome.body);
   } catch (error) {

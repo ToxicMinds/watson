@@ -39,7 +39,10 @@ async function account(email, password) {
 }
 
 const doctorPassword = remembered("logins.env", "LOCAL_PASSWORD");
-await account("doctor@watson.test", doctorPassword);
+const doctorId = await account("doctor@watson.test", doctorPassword);
+// Since SEC-02 an account is nobody until given a role: this one is the computer's doctor.
+const role = await admin.rpc("register_practitioner", { p_user_id: doctorId });
+if (role.error) throw role.error;
 const doctor = createClient(status.API_URL, status.PUBLISHABLE_KEY, noSession);
 const signedIn = await doctor.auth.signInWithPassword({ email: "doctor@watson.test", password: doctorPassword });
 if (signedIn.error) throw signedIn.error;

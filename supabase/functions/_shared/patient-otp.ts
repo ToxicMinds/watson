@@ -11,6 +11,22 @@ export function isPatientEmail(value: string): boolean {
   return value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+/** A WhatsApp number as the database's private.normal_phone reads it (+ and 7-15 digits), or null. */
+export function normalizePatientPhone(phone: string): string | null {
+  const digits = phone.trim().replace(/^00/, "+").replace(/[^0-9+]/g, "");
+  return /^\+[1-9][0-9]{6,14}$/.test(digits) ? digits : null;
+}
+
+/** The Auth account behind a WhatsApp sign-in needs an email to open a session; this one reaches nobody. */
+export function phoneSignInEmail(phone: string): string {
+  return `whatsapp-${phone.replace(/^\+/, "")}@patients.watson.invalid`;
+}
+
+/** The WhatsApp message that carries a sign-in code. */
+export function whatsappCodeMessage(code: string): string {
+  return `Your Watson sign-in code is ${code}. It expires in 10 minutes. Never share it with anyone.`;
+}
+
 export function randomOtpCode(): string {
   const values = new Uint32Array(1);
   do crypto.getRandomValues(values);

@@ -9,6 +9,7 @@ import { DocumentsPanel } from "@/components/documents-panel";
 import { WhatsAppPanel } from "@/components/whatsapp-panel";
 import { FormPanel } from "@/components/form-panel";
 import { JobPanel } from "@/components/job-panel";
+import { PatientCheck, type Candidate } from "@/components/patient-check";
 import { PatientPanel } from "@/components/patient-panel";
 import { euros } from "@/lib/fee";
 import { Journey, Notice } from "@/components/status";
@@ -18,12 +19,17 @@ import { clock, humanSize } from "@/lib/audio";
 import type { Tables } from "@/lib/database.types";
 import { RequireSession } from "@/lib/session";
 import { dateTime, dayMonth, LANGUAGE_LABEL, summarise, WITHDRAWABLE } from "@/lib/status";
+import { shownPatient, type Shown } from "@/lib/patient";
+import { earlierPatients } from "@/lib/records";
 import { supabase } from "@/lib/supabase";
 
 type Consultation = Tables<"consultations">;
 type Track = Tables<"audio_tracks">;
 type Patient = Pick<Tables<"patients">, "id" | "name" | "phone" | "email">;
-type Loaded = { consultation: Consultation; tracks: Track[]; audioLeft: boolean; patient: Patient | null };
+type Loaded = {
+  consultation: Consultation; tracks: Track[]; audioLeft: boolean; patient: Patient | null;
+  shown: Shown | null; candidate: Candidate | null;
+};
 const SPEAKERS = ["practitioner", "patient"] as const;
 const FORM_STATUSES = ["transcript_ready", "transcript_reviewed", "extraction_processing", "extraction_failed",
   "draft_ready", "under_review", "approved"];
@@ -80,10 +86,20 @@ function ConsultationView({ userId }: { userId: string }) {
     // After a withdrawal, files that could not be deleted are offered for deletion again.
     const files = consultation.data.status === "consent_withdrawn"
       ? (await supabase.storage.from("audio").list(`${userId}/${id}`)).data ?? [] : [];
-    const patient = consultation.data.patient_id
-      ? (await supabase.from("patients").select("id, name, phone, email").eq("id", consultation.data.patient_id).maybeSingle()).data
+    const row = consultation.data;
+    const patient = row.patient_id
+      ? (await supabase.from("patients").select("id, name, phone, email").eq("id", row.patient_id).maybeSingle()).data
       : null;
-    return { consultation: consultation.data, tracks: tracks.data, audioLeft: files.length > 0, patient };
+    // Who it is with, and whom to ask about (components/patient-check.tsx).
+    const columns = { ...row, patients: patient };
+    const earlier = await earlierPatients([columns]);
+    const shown = shownPatient(columns, earlier);
+    const before = row.legacy_patient_id ? earlier.get(row.legacy_patient_id) : undefined;
+    const candidate = shown?.check === "earlier" && before ? { id: row.legacy_patient_id!, ...before }
+      : shown?.check === "typed" ? (await supabase.from("patients").select("id, name, phone, email")
+        .eq(row.patient_claim_phone ? "phone" : "email", row.patient_claim_phone ?? row.patient_claim_email!).maybeSingle()).data
+      : null;
+    return { consultation: row, tracks: tracks.data, audioLeft: files.length > 0, patient, shown, candidate };
   }, [id, userId]);
   const load = useCallback(() => {
     fetchAll().then(setLoaded);
@@ -106,7 +122,7 @@ function ConsultationView({ userId }: { userId: string }) {
   }
   if (loaded === null) return <p className="wa-meta" role="status">Loading the consultation…</p>;
 
-  const { consultation, tracks, audioLeft, patient } = loaded;
+  const { consultation, tracks, audioLeft, patient, shown, candidate } = loaded;
   const status = consultation.status;
   const language = LANGUAGE_LABEL[consultation.language];
 
@@ -146,10 +162,10 @@ function ConsultationView({ userId }: { userId: string }) {
       {back}
       <div className="wa-pagehead">
         <div className="wa-pagehead__text">
-          <h1 className="wa-title">{patient?.name ?? consultation.synthetic_patient_ref}</h1>
+          <h1 className="wa-title">{shown?.name ?? consultation.synthetic_patient_ref}</h1>
           <p className="wa-meta">
             {dateTime(consultation.scheduled_at)} · {language}
-            {patient && ` · ${patient.phone ?? patient.email}`}
+            {shown && ` · ${shown.phone ?? shown.email}`}
             {consultation.fee_cents !== null && ` · Fee ${euros(consultation.fee_cents)}`}
             {consultation.scenario_notes && ` · ${consultation.scenario_notes}`}
           </p>
@@ -234,9 +250,10 @@ function ConsultationView({ userId }: { userId: string }) {
 
       {FORM_STATUSES.includes(status) && <FormPanel consultationId={consultation.id} status={status} onChanged={load} />}
 
-      {status !== "consent_withdrawn" && <PatientPanel consultation={consultation} patient={patient} onChanged={load} />}
+      {shown?.check && <PatientCheck consultationId={consultation.id} shown={shown} candidate={candidate} onChanged={load} />}
+      {status !== "consent_withdrawn" && <PatientPanel consultation={consultation} patient={shown} onChanged={load} />}
 
-      {status !== "consent_withdrawn" && <DocumentsPanel consultationId={consultation.id} patient={patient} onChanged={load} />}
+      {status !== "consent_withdrawn" && <DocumentsPanel consultationId={consultation.id} patient={patient} person={shown} onChanged={load} />}
 
       <WhatsAppPanel consultationId={consultation.id} />
 

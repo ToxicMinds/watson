@@ -82,7 +82,7 @@ async function fetchForm(id: string): Promise<Loaded | "missing" | "failed"> {
   ]);
   return {
     consultation: consultation.data,
-    patientName: patient.data?.name ?? null,
+    patientName: patient.data?.name ?? consultation.data.patient_claim_name ?? null,
     form: form.data,
     answers: answers.data,
     segments: new Map(segments.data.map((segment) => [segment.position, segment])),

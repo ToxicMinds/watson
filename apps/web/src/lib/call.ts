@@ -1,6 +1,7 @@
 // A consultation call. Video and voice go directly between the two browsers (WebRTC); the
 // Supabase channel named by the invite token carries only the handshake. Free: no media server.
 import { formatOfRecording, type AudioFormat } from "./audio";
+import { RELAY } from "./features";
 import { supabase } from "./supabase";
 
 type Role = "doctor" | "patient";
@@ -11,9 +12,25 @@ type Message =
   | { kind: "ice"; candidate: RTCIceCandidateInit };
 type Signal = Message & { from: Role; session: string };
 
-// Public STUN servers let each browser find its own address.
-// ponytail: no relay (TURN); add one if some networks cannot connect directly.
-const ICE: RTCConfiguration = { iceServers: [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }] };
+// Public STUN servers let each browser find its own address; enough on most home and office networks.
+const STUN: RTCConfiguration = { iceServers: [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }] };
+
+/**
+ * The call's servers from the `ice` edge function: STUN plus, when Watson has its relay, TURN credentials
+ * for this call. A phone on a mobile network sits behind its carrier's shared address and cannot reach the
+ * other browser directly (owner, 28 Oct: a call from 5G never connected); the relay carries those calls.
+ * On one computer (features.ts, RELAY) and whenever the function does not answer, the call keeps STUN alone.
+ */
+async function iceFor(token: string): Promise<RTCConfiguration> {
+  if (!RELAY) return STUN;
+  try {
+    const { data, error } = await supabase.functions.invoke("ice", { body: { token }, timeout: 8000 });
+    if (!error && Array.isArray(data?.iceServers)) return { iceServers: data.iceServers };
+  } catch {
+    // keep STUN
+  }
+  return STUN;
+}
 
 /** The patient's link, short enough to read out: /j/K7P4QX9M opens their page (app/j). */
 export function patientLink(shortCode: string): string {
@@ -30,6 +47,7 @@ export function connect({ token, role, local, onRemote, onState }: {
 }) {
   const session = crypto.randomUUID();
   const other: Role = role === "doctor" ? "patient" : "doctor";
+  const servers = iceFor(token);
   let peer: RTCPeerConnection | null = null;
   let otherSession: string | null = null;
   let waiting: RTCIceCandidateInit[] = [];
@@ -37,11 +55,18 @@ export function connect({ token, role, local, onRemote, onState }: {
   const channel = supabase.channel(`call-${token}`, { config: { broadcast: { self: false } } });
   const send = (message: Message) =>
     channel.send({ type: "broadcast", event: "signal", payload: { ...message, from: role, session } });
+  // One message at a time, in order: a handshake step must finish before the next starts.
+  const inTurn = (step: () => Promise<void>) => {
+    queue = queue.then(step).catch(() => onState("reconnecting"));
+  };
+  // A candidate for an older connection is refused; that is no reason to call the connection lost.
+  const addCandidate = (candidate: RTCIceCandidateInit) => peer?.addIceCandidate(candidate).catch(() => {});
 
-  function fresh() {
+  async function fresh() {
+    const configuration = await servers;
     peer?.close();
     waiting = [];
-    const created = new RTCPeerConnection(ICE);
+    const created = new RTCPeerConnection(configuration);
     local.getTracks().forEach((track) => created.addTrack(track, local));
     created.onicecandidate = ({ candidate }) => {
       if (candidate) void send({ kind: "ice", candidate: candidate.toJSON() });
@@ -51,14 +76,27 @@ export function connect({ token, role, local, onRemote, onState }: {
       if (created !== peer) return;
       if (created.connectionState === "connected") onState("connected");
       if (created.connectionState === "disconnected" || created.connectionState === "failed") onState("reconnecting");
+      // A connection that failed (the network changed, say from Wi-Fi to mobile data) gets a new one:
+      // the doctor makes every offer, so the doctor starts it.
+      if (created.connectionState === "failed" && role === "doctor") {
+        setTimeout(() => inTurn(async () => {
+          if (created === peer) await offer();
+        }), 1000);
+      }
     };
     peer = created;
     onState("connecting");
     return created;
   }
 
+  async function offer() {
+    const created = await fresh();
+    await created.setLocalDescription(await created.createOffer());
+    await send({ kind: "offer", sdp: created.localDescription!.toJSON() });
+  }
+
   async function flush() {
-    for (const candidate of waiting) await peer?.addIceCandidate(candidate);
+    for (const candidate of waiting) await addCandidate(candidate);
     waiting = [];
   }
 
@@ -69,12 +107,10 @@ export function connect({ token, role, local, onRemote, onState }: {
       if (signal.session === otherSession && peer) return;
       otherSession = signal.session;
       if (role === "patient") return void (await send({ kind: "hello" }));
-      const created = fresh();
-      await created.setLocalDescription(await created.createOffer());
-      await send({ kind: "offer", sdp: created.localDescription!.toJSON() });
+      await offer();
     } else if (signal.kind === "offer") {
       otherSession = signal.session;
-      const created = fresh();
+      const created = await fresh();
       await created.setRemoteDescription(signal.sdp);
       await flush();
       await created.setLocalDescription(await created.createAnswer());
@@ -83,7 +119,7 @@ export function connect({ token, role, local, onRemote, onState }: {
       await peer?.setRemoteDescription(signal.sdp);
       await flush();
     } else if (signal.kind === "ice") {
-      if (peer?.remoteDescription) await peer.addIceCandidate(signal.candidate);
+      if (peer?.remoteDescription) await addCandidate(signal.candidate);
       else waiting.push(signal.candidate);
     } else if (signal.kind === "bye") {
       peer?.close();
@@ -93,10 +129,7 @@ export function connect({ token, role, local, onRemote, onState }: {
     }
   }
 
-  channel.on("broadcast", { event: "signal" }, ({ payload }) => {
-    // One message at a time, in order: a handshake step must finish before the next starts.
-    queue = queue.then(() => handle(payload as Signal)).catch(() => onState("reconnecting"));
-  });
+  channel.on("broadcast", { event: "signal" }, ({ payload }) => inTurn(() => handle(payload as Signal)));
   onState("joining");
   channel.subscribe((status) => {
     if (status === "SUBSCRIBED") {
