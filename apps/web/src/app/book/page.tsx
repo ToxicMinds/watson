@@ -88,7 +88,7 @@ function Choose({ offer }: { offer: Offer }) {
   const days = byDay(times, zone);
   const today = new Date();
   const strip = Array.from({ length: DAYS_SHOWN }, (_, i) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + i));
-  const [day, setDay] = useState(() => [...days.keys()][0] ?? "");
+  const [day, setDay] = useState("");
   const [chosen, setChosen] = useState<string | null>(null);
   const shown = days.get(day) ?? [];
 
@@ -132,13 +132,15 @@ function Choose({ offer }: { offer: Offer }) {
                     );
                   })}
                 </ul>
-                <div className="wa-times" role="group" aria-label={`Times on ${shown[0] ? dateTime(shown[0]).split(",")[0] : day}`}>
-                  {shown.map((time) => (
-                    <button key={time} type="button" className="wa-time" aria-pressed={time === chosen} onClick={() => setChosen(time)}>
-                      {clockTime(time, zone)}
-                    </button>
-                  ))}
-                </div>
+                {day ? (
+                  <div className="wa-times" role="group" aria-label={`Times on ${dateTime(shown[0]).split(",")[0]}`}>
+                    {shown.map((time) => (
+                      <button key={time} type="button" className="wa-time" aria-pressed={time === chosen} onClick={() => setChosen(time)}>
+                        {clockTime(time, zone)}
+                      </button>
+                    ))}
+                  </div>
+                ) : <p className="wa-text">Choose an available day to see its times.</p>}
               </>
             )}
           </section>

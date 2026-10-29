@@ -49,6 +49,9 @@ test("a practitioner opens hours, a patient books one, the practitioner sees it"
 
   await expect(patient.getByRole("heading", { name, level: 1 })).toBeVisible();
   const chooser = patient.getByRole("region", { name: "Choose a time" });
+  await expect(chooser.locator('.wa-day[aria-pressed="true"]')).toHaveCount(0);
+  await expect(chooser.locator(".wa-time")).toHaveCount(0);
+  await chooser.locator(".wa-day:not(:disabled)").first().click();
   const firstTime = chooser.getByRole("group").getByRole("button").first();
   const chosen = (await firstTime.textContent())!.trim();
   await firstTime.click();
