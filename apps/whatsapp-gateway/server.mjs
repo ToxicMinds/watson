@@ -5,8 +5,9 @@
 //   Nothing else on the number leaves this service, and nothing of a message is logged.
 // - what to send: Watson's answer to each message, and every minute the reminders that are due.
 // - its pairing: kept in Watson's database, sealed here (sealed.mjs), since Render wipes the disk.
-// It answers two addresses: /health for Watson's five-minute knock (which also keeps the free
-// service awake) and /, the QR code that links the number, behind a password.
+// It answers three addresses: /health for Watson's five-minute knock (which also keeps the free
+// service awake), /, the QR code that links the number, behind a password, and /send, a message Watson
+// hands over to send at once (a sign-in code, send.mjs), behind the secret Watson and the gateway share.
 import { createServer } from "node:http";
 import makeWASocket, {
   Browsers, BufferJSON, DisconnectReason, downloadMediaMessage, fetchLatestBaileysVersion, initAuthCreds,
@@ -16,6 +17,7 @@ import pino from "pino";
 import QRCode from "qrcode";
 import { forWatson, senderPhone } from "./filter.mjs";
 import { mayPair, seal, unseal } from "./sealed.mjs";
+import { sendRequest } from "./send.mjs";
 
 const WATSON_URL = process.env.WATSON_URL ?? ""; // https://<project>.supabase.co/functions/v1/whatsapp
 const SECRET = process.env.WATSON_GATEWAY_SECRET ?? "";
@@ -198,7 +200,32 @@ process.on("SIGTERM", async () => {
   process.exit(0);
 });
 
+/** /send: one message from Watson, sent now. Answers 200 once WhatsApp has taken it. */
+async function sendNow(request, response) {
+  let raw = "";
+  for await (const chunk of request) {
+    raw += chunk;
+    if (raw.length > 4096) return response.writeHead(413).end();
+  }
+  let body = null;
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    // an unreadable body is refused below
+  }
+  const message = sendRequest(request.headers["x-watson-gateway"], SECRET, body);
+  if (!message) return response.writeHead(403).end();
+  if (status !== "CONNECTED") return response.writeHead(503).end();
+  try {
+    await sock.sendMessage(message.to, { text: message.text });
+    response.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ ok: true }));
+  } catch {
+    response.writeHead(502).end();
+  }
+}
+
 createServer((request, response) => {
+  if (request.method === "POST" && request.url === "/send") return void sendNow(request, response);
   if (request.url === "/health") {
     response.writeHead(200, { "Content-Type": "application/json" });
     return response.end(JSON.stringify({ status }));
