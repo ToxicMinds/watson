@@ -12,9 +12,10 @@ const contactOf = (person: Person) => person.phone ?? person.email ?? "";
 const kindOf = (person: Person) => (person.phone ? "phone number" : "email");
 
 /**
- * "Is this your patient?" (owner, 28 Oct). Anyone with a consultation's link can type a name and number,
- * so Watson asks the practitioner before joining a visit to a patient's history: the patient it was linked
- * to before the check existed, the patient of theirs with the same phone or email, or a new patient.
+ * "Is this your patient?" (owner, 28 Oct; 29 Oct: ask first, even for the practitioner's own typing).
+ * Whatever was typed for a consultation, by the patient on their link or booking, or by the practitioner,
+ * Watson asks before joining the visit to a patient's history: the patient it was linked to before the
+ * check existed, the patient of theirs with the same phone or email, or a new patient.
  */
 export function PatientCheck({ consultationId, shown, candidate, onChanged }: {
   consultationId: string;
@@ -49,12 +50,12 @@ export function PatientCheck({ consultationId, shown, candidate, onChanged }: {
         </p>
       ) : candidate ? (
         <p className="wa-text">
-          The patient wrote <strong>{shown.name}</strong>, {contactOf(shown)}. You already have
+          This consultation is for <strong>{shown.name}</strong>, {contactOf(shown)}. You already have
           {" "}<strong>{candidate.name}</strong> with this {kindOf(shown)}. Is it the same person?
         </p>
       ) : (
         <p className="wa-text">
-          The patient wrote <strong>{shown.name}</strong>, {contactOf(shown)}. They are not among your patients yet.
+          This consultation is for <strong>{shown.name}</strong>, {contactOf(shown)}. They are not among your patients yet.
         </p>
       )}
       <div className="wa-actions">
@@ -73,7 +74,7 @@ export function PatientCheck({ consultationId, shown, candidate, onChanged }: {
           </button>
         )}
       </div>
-      <p className="wa-hint">Anyone with the link can type a name, so Watson asks you before it keeps visits together.</p>
+      <p className="wa-hint">Watson asks before it keeps visits together, so a typo, or a name typed by someone else on the link, never mixes two patients&apos; records.</p>
       {problem && <Notice tone="failed" title="That did not work">{problem}</Notice>}
     </section>
   );

@@ -30,17 +30,20 @@ const state = async (id: string) => (await eva.client.from("consultations")
   .select("patient_association_state, patients(name, phone, email)").eq("id", id).single()).data;
 
 describe("naming the patient under Documents", () => {
-  it("is the practitioner's own word, as on New consultation: a new patient, then the same one by phone", async () => {
+  it("is a claim to check, like everything typed for a consultation (owner, 29 Oct: ask first)", async () => {
     const number = phone();
     const first = await rpc(eva.client, "create_consultation", { p_scheduled_at: "2026-11-03T09:00:00Z", p_language: "sk", p_consent_recorded: true });
     expect(await rpc(eva.client, "set_patient", { p_consultation_id: first.consultation_id, p_name: "Ján Malý", p_contact: number }))
       .toMatchObject({ ok: true });
-    const named = await state(first.consultation_id!);
-    expect(named).toEqual({ patient_association_state: "practitioner_confirmed", patients: { name: "Ján Malý", phone: number, email: null } });
+    expect(await state(first.consultation_id!)).toEqual({ patient_association_state: "claimed", patients: null });
+    const added = await rpc(eva.client, "confirm_new_patient", { p_consultation_id: first.consultation_id });
+    expect((await state(first.consultation_id!))!.patients).toEqual({ name: "Ján Malý", phone: number, email: null });
 
     const second = await rpc(eva.client, "create_consultation", { p_scheduled_at: "2026-11-04T09:00:00Z", p_language: "sk", p_consent_recorded: true });
-    expect(await rpc(eva.client, "set_patient", { p_consultation_id: second.consultation_id, p_name: "Jan Maly", p_contact: number }))
-      .toMatchObject({ ok: true });
+    await rpc(eva.client, "set_patient", { p_consultation_id: second.consultation_id, p_name: "Jan Maly", p_contact: number });
+    expect(await rpc(eva.client, "patient_review_association", {
+      p_consultation_id: second.consultation_id, p_patient_id: added.patient_id, p_decision: "confirm",
+    })).toMatchObject({ ok: true });
     expect((await state(second.consultation_id!))!.patients).toEqual({ name: "Ján Malý", phone: number, email: null });
   });
 
@@ -49,6 +52,7 @@ describe("naming the patient under Documents", () => {
     const made = await rpc(eva.client, "create_consultation", {
       p_scheduled_at: "2026-11-05T09:00:00Z", p_language: "sk", p_consent_recorded: true, p_patient_name: "Zuzana Kovac", p_patient_contact: number,
     });
+    expect(await rpc(eva.client, "confirm_new_patient", { p_consultation_id: made.consultation_id })).toMatchObject({ ok: true });
     expect(await rpc(eva.client, "set_patient", { p_consultation_id: made.consultation_id, p_name: "Zuzana Kováčová", p_contact: number }))
       .toMatchObject({ ok: true });
     expect((await state(made.consultation_id!))!.patients).toEqual({ name: "Zuzana Kováčová", phone: number, email: null });
@@ -106,6 +110,7 @@ describe("a consultation linked before the check existed", () => {
       p_scheduled_at: "2026-11-06T09:00:00Z", p_language: "sk", p_consent_recorded: true, p_patient_name: "Robin's patient", p_patient_contact: number,
     });
     const id = made.consultation_id!;
+    expect(await rpc(eva.client, "confirm_new_patient", { p_consultation_id: id })).toMatchObject({ ok: true });
     // What the SEC-02 migration did to every linked consultation on the live database.
     sqlAsOwner(`update public.consultations set legacy_patient_id = patient_id, patient_id = null,
       patient_association_state = 'legacy_unverified' where id = '${id}';`);

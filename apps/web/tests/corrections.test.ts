@@ -96,6 +96,13 @@ describe("a line of the full transcript", () => {
   it("is corrected, keeps what Watson heard, and the spelling reaches the rest of it and this patient's next consultation", async () => {
     const patient = { name: "Zuzana Kováčová", contact: contact() };
     const id = await consultationWith(patient);
+    const patientId = sqlAsOwner(`
+      insert into public.patients (practitioner_id, name, phone)
+      values ('${eva.id}', '${patient.name}', '${patient.contact.replace(/\s/g, "")}') returning id;
+    `).split("\n")[0]!;
+    expect(await rpc(eva.client, "patient_review_association", {
+      p_consultation_id: id, p_patient_id: patientId, p_decision: "confirm",
+    })).toMatchObject({ ok: true });
     transcriptOf(id, ["I am Susana Kovacova.", "Susana Kovacova, yes, from Nitra."]);
     const [first] = await segments(id);
     expect(await rpc(eva.client, "correct_transcript_line", {
@@ -107,6 +114,9 @@ describe("a line of the full transcript", () => {
     ]);
 
     const next = await consultationWith(patient);
+    expect(await rpc(eva.client, "patient_review_association", {
+      p_consultation_id: next, p_patient_id: patientId, p_decision: "confirm",
+    })).toMatchObject({ ok: true });
     transcriptOf(next, ["Hello, Susana Kovacova here."]);
     expect((await segments(next)).map((s) => s.reviewed_text)).toEqual(["Hello, Zuzana Kováčová here."]);
   });
