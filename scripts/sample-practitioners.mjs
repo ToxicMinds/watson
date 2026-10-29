@@ -59,6 +59,8 @@ async function add({ email, ...page }) {
     : await admin.auth.admin.createUser({ email, password, email_confirm: true });
   if (made.error) throw made.error;
   id = made.data.user.id;
+  const role = await admin.rpc("register_practitioner", { p_user_id: id }); // since SEC-02, a role or nothing
+  if (role.error) throw role.error;
   const client = createClient(url, publicKey, NO_SESSION);
   const signedIn = await client.auth.signInWithPassword({ email, password });
   if (signedIn.error) throw signedIn.error;

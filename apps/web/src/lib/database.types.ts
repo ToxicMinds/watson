@@ -1322,6 +1322,7 @@ export type Database = {
         }
         Returns: Json
       }
+      register_practitioner: { Args: { p_user_id: string }; Returns: undefined }
       released: {
         Args: {
           p_consultation: Database["public"]["Tables"]["consultations"]["Row"]
