@@ -1,11 +1,11 @@
 // A call that can only go through Watson's relay (owner, 28 Oct: a call from a phone on 5G never
 // connected). Both browsers are told to use relay addresses only, which is what a phone behind its
-// carrier's shared address ends up needing. Needs the `ice` function with Watson's Cloudflare TURN key,
-// so it runs on request: E2E_RELAY=1 (locally with `supabase functions serve`, or with E2E_BASE_URL).
+// carrier's shared address ends up needing. Needs the hosted `ice` function with Watson's Cloudflare TURN
+// key (a Watson on one computer asks for no relay), so it runs on request: E2E_RELAY=1 with E2E_BASE_URL.
 import type { Page } from "@playwright/test";
 import { expect, signIn, test } from "./account";
 
-test.skip(!process.env.E2E_RELAY, "set E2E_RELAY=1 where the ice function has Watson's TURN key");
+test.skip(!process.env.E2E_RELAY, "set E2E_RELAY=1 with E2E_BASE_URL: the hosted ice function has Watson's TURN key");
 
 /** Every connection the page makes may use relay addresses only, and is kept for the test to inspect. */
 async function relayOnly(page: Page) {

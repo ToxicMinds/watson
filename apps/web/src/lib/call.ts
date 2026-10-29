@@ -1,6 +1,7 @@
 // A consultation call. Video and voice go directly between the two browsers (WebRTC); the
 // Supabase channel named by the invite token carries only the handshake. Free: no media server.
 import { formatOfRecording, type AudioFormat } from "./audio";
+import { RELAY } from "./features";
 import { supabase } from "./supabase";
 
 type Role = "doctor" | "patient";
@@ -18,9 +19,10 @@ const STUN: RTCConfiguration = { iceServers: [{ urls: ["stun:stun.l.google.com:1
  * The call's servers from the `ice` edge function: STUN plus, when Watson has its relay, TURN credentials
  * for this call. A phone on a mobile network sits behind its carrier's shared address and cannot reach the
  * other browser directly (owner, 28 Oct: a call from 5G never connected); the relay carries those calls.
- * Without the function (this computer, offline) the call keeps STUN alone.
+ * On one computer (features.ts, RELAY) and whenever the function does not answer, the call keeps STUN alone.
  */
 async function iceFor(token: string): Promise<RTCConfiguration> {
+  if (!RELAY) return STUN;
   try {
     const { data, error } = await supabase.functions.invoke("ice", { body: { token }, timeout: 8000 });
     if (!error && Array.isArray(data?.iceServers)) return { iceServers: data.iceServers };
