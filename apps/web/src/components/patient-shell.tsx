@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useSession } from "@/lib/session";
 
-/** Frame for the pages patients use without an account: the front page and booking. */
+/** Frame for the pages patients use without an account: the front page, booking and privacy. */
 export function PatientShell({ children }: { children: ReactNode }) {
   const session = useSession();
   return (
@@ -23,6 +23,9 @@ export function PatientShell({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main className="wa-page">{children}</main>
+      <footer className="wa-page" style={{ paddingTop: 0 }}>
+        <p className="wa-meta"><Link href="/privacy/">Privacy</Link></p>
+      </footer>
     </>
   );
 }
