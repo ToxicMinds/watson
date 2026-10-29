@@ -50,8 +50,15 @@ def _clinical_worker(command: str) -> None:
     main()
 
 
+# Europe, near Watson's database in Frankfurt (owner, 29 Oct 2026: "mostly for speed"):
+# recordings and documents travel less. The broad "eu" region costs 1.15x Modal's base price
+# (one country: 1.75x) and starts containers sooner. Volumes are distributed: models follow.
+REGION = "eu"
+
+
 @app.function(
     image=image,
+    region=REGION,
     cpu=4.0,
     memory=8192,
     timeout=60 * 60,
@@ -64,7 +71,9 @@ def drain() -> None:
     _clinical_worker("drain")
 
 
-@app.function(image=image, timeout=30 * 60, volumes={MODELS: models}, secrets=[engine_secret])
+@app.function(
+    image=image, region=REGION, timeout=30 * 60, volumes={MODELS: models}, secrets=[engine_secret]
+)
 def fetch_models() -> None:
     for command in ("fetch-model", "fetch-form-model", "fetch-ocr-model"):
         _clinical_worker(command)
