@@ -618,13 +618,13 @@ export type Database = {
           id: string
           legacy_patient_id: string | null
           media_type: string
-          removed_at: string | null
           page_texts: string[] | null
           patient_id: string | null
           practitioner_id: string
           read_at: string | null
           reading: Database["public"]["Enums"]["document_reading"]
           reading_attempt: number
+          removed_at: string | null
           size_bytes: number
           source: string
           storage_path: string
@@ -641,13 +641,13 @@ export type Database = {
           id?: string
           legacy_patient_id?: string | null
           media_type: string
-          removed_at?: string | null
           page_texts?: string[] | null
           patient_id?: string | null
           practitioner_id: string
           read_at?: string | null
           reading?: Database["public"]["Enums"]["document_reading"]
           reading_attempt?: number
+          removed_at?: string | null
           size_bytes: number
           source: string
           storage_path: string
@@ -664,13 +664,13 @@ export type Database = {
           id?: string
           legacy_patient_id?: string | null
           media_type?: string
-          removed_at?: string | null
           page_texts?: string[] | null
           patient_id?: string | null
           practitioner_id?: string
           read_at?: string | null
           reading?: Database["public"]["Enums"]["document_reading"]
           reading_attempt?: number
+          removed_at?: string | null
           size_bytes?: number
           source?: string
           storage_path?: string
@@ -1066,26 +1066,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      current_user_roles: { Args: Record<PropertyKey, never>; Returns: string[] }
-      provision_patient_role_after_otp: { Args: { p_user_id: string }; Returns: Json }
-      register_patient_otp_session: {
-        Args: {
-          p_user_id: string
-          p_session_id: string
-          p_verified_email: string | null
-          p_verified_phone: string | null
-        }
-        Returns: Json
-      }
-      issue_patient_otp_challenge: {
-        Args: { p_contact_hash: string; p_code_hash: string; p_ip_hash: string }
-        Returns: Json
-      }
-      verify_patient_otp_challenge: {
-        Args: { p_contact_hash: string; p_code_hash: string; p_ip_hash: string }
-        Returns: Json
-      }
-      cancel_patient_otp_challenge: { Args: { p_contact_hash: string; p_code_hash: string }; Returns: Json }
       add_document: {
         Args: {
           p_consultation_id: string
@@ -1120,16 +1100,29 @@ export type Database = {
         Args: { p_from: string; p_slug: string; p_to: string }
         Returns: Json
       }
+      bootstrap_patient_role: { Args: never; Returns: Json }
       calendar_week: { Args: { p_from: string; p_to: string }; Returns: Json }
+      cancel_patient_otp_challenge: {
+        Args: { p_code_hash: string; p_contact_hash: string }
+        Returns: Json
+      }
       cancel_transcription: {
         Args: { p_consultation_id: string }
         Returns: Json
+      }
+      complete_document_cleanup: {
+        Args: { p_document_id: string }
+        Returns: boolean
       }
       confirm_audio_deleted: {
         Args: { p_consultation_id: string }
         Returns: Json
       }
       confirm_document: { Args: { p_document_id: string }; Returns: Json }
+      confirm_new_patient: {
+        Args: { p_consultation_id: string }
+        Returns: Json
+      }
       correct_live_line: {
         Args: { p_piece_id: string; p_spellings?: Json; p_text: string }
         Returns: Json
@@ -1138,7 +1131,6 @@ export type Database = {
         Args: { p_segment_id: string; p_spellings?: Json; p_text: string }
         Returns: Json
       }
-      complete_document_cleanup: { Args: { p_document_id: string }; Returns: boolean }
       create_consultation: {
         Args: {
           p_consent_recorded: boolean
@@ -1152,6 +1144,7 @@ export type Database = {
         }
         Returns: Json
       }
+      current_user_roles: { Args: never; Returns: string[] }
       declare_recorded_together: {
         Args: { p_consultation_id: string; p_recorded_together: boolean }
         Returns: Json
@@ -1252,6 +1245,10 @@ export type Database = {
         Returns: Json
       }
       invite_details: { Args: { p_token: string }; Returns: Json }
+      issue_patient_otp_challenge: {
+        Args: { p_code_hash: string; p_contact_hash: string; p_ip_hash: string }
+        Returns: Json
+      }
       make_consultation_free: {
         Args: { p_consultation_id: string }
         Returns: Json
@@ -1280,7 +1277,15 @@ export type Database = {
         Returns: Json
       }
       patient_review_association: {
-        Args: { p_consultation_id: string; p_decision: string; p_patient_id: string | null }
+        Args: {
+          p_consultation_id: string
+          p_decision: string
+          p_patient_id: string
+        }
+        Returns: Json
+      }
+      provision_patient_role_after_otp: {
+        Args: { p_user_id: string }
         Returns: Json
       }
       read_document_again: { Args: { p_document_id: string }; Returns: Json }
@@ -1307,6 +1312,15 @@ export type Database = {
       register_engine: {
         Args: { p_label: string; p_user_id: string }
         Returns: undefined
+      }
+      register_patient_otp_session: {
+        Args: {
+          p_session_id: string
+          p_user_id: string
+          p_verified_email: string
+          p_verified_phone: string
+        }
+        Returns: Json
       }
       released: {
         Args: {
@@ -1359,6 +1373,10 @@ export type Database = {
       verify_audit_chain: {
         Args: { p_consultation_id: string }
         Returns: boolean
+      }
+      verify_patient_otp_challenge: {
+        Args: { p_code_hash: string; p_contact_hash: string; p_ip_hash: string }
+        Returns: Json
       }
       watson_whatsapp: { Args: { p_token: string }; Returns: Json }
       whatsapp_add_document: {
@@ -1613,3 +1631,4 @@ export const Constants = {
     },
   },
 } as const
+
