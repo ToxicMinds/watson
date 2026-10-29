@@ -72,3 +72,8 @@ lets only the accounts Nikhil has added connect, so send Nikhil the Gmail addres
 - Logs: `.local/web.log`, `.local/engine.log` and, with online services, `.local/functions.log`.
 - Patients on other phones or computers cannot reach a Watson on your Mac; that needs the hosted
   Watson at https://watson-assists.onrender.com.
+- After `git pull`, `scripts/local.sh start` applies the database changes that came with it. If the
+  doctor login says it may not do something ("Practitioner role required"), run
+  `node scripts/local-accounts.mjs` once: it gives the doctor login its role again.
+- Patient sign-in (a code by email or WhatsApp) needs Watson's online services, so on this Mac it says
+  it could not send a code. Everything else works offline. Calls stay on this Mac, with no relay.

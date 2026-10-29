@@ -84,6 +84,8 @@ case "${1:-}" in
     ;;
   start)
     supabase start "${stack_options[@]}" >/dev/null
+    # After a git pull: the database changes that came with it (supabase start applies them only to a new database).
+    supabase migration up --local >/dev/null
     web_env
     if ! running engine; then
       # The whole group's output goes to the log, so nothing holds this terminal; exec keeps the pid true.
