@@ -9,9 +9,8 @@ https://watson-assists.onrender.com), main at `36efb71`, CI green. What happened
    The refresh token is for the **same OAuth client as Google Calendar** ("Watson web"): the function
    reads `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, which Calendar already uses, so a separate client
    would have broken Calendar. Scope: only `gmail.send`, signed in as watson.assists@gmail.com.
-   **Open:** the consent screen is still in Testing, so this token expires on **5 November**. Publishing
-   needs a privacy page on Watson's site and its link on the Branding page (owner approved publishing;
-   the privacy text awaits the owner). Until then, re-issue the token weekly.
+   The app was then published (In production, unverified) after the privacy page went live at
+   `/privacy/` (owner approved the text, 29 Oct), and the token re-issued: it no longer expires.
 2. **Migrations.** Dry run reviewed, then all 11 applied: your 8 (with your 28 Oct edit of
    `20261028090000`: the practitioner's own typing stays a claim, the owner's decision of 29 Oct) and 3 new:
    `20261029090000_confirm_new_patient` (the practitioner's "Is this your patient?": add as a new patient;
